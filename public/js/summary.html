@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920" />
+    <title>SAFE Calculator Report</title>
+    <script src="tailwind.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="chart.js"></script>
+    <script src="report-config.js" defer></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #e5e5e5;
+        font-family: "Inter", sans-serif;
+      }
+      /* Ensures arbitrary values like opacity-33 and size-full work in any environment */
+      .opacity-33 {
+        opacity: 0.33;
+      }
+      .size-full {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      style="
+        width: 1920px;
+        height: 1080px;
+        position: relative;
+        background: white;
+        margin: 0 auto;
+        overflow: hidden;
+      "
+    >
+      <div class="bg-white relative size-full" data-name="PG_1">
+        <div
+          class="absolute border-[#4039a8] border-b-[3px] border-solid h-[103px] left-[260px] top-0 w-[1660px]"
+        ></div>
+        <div
+          class="absolute bg-[#4039a8] h-[103px] left-0 top-0 w-[260px] flex items-center justify-center"
+        >
+          <div class="flex items-center">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="165"
+              height="33"
+              viewBox="0 0 165 33"
+              fill="none"
+            >
+              <path
+                d="M21.7495 1.52143e-06L3.32176 1.52143e-06C1.48704 1.52143e-06 0 1.48101 0 3.30829C0 5.13557 1.48704 6.61658 3.32176 6.61658L21.7495 6.61658C22.4133 6.61745 23.0281 6.74828 23.5938 6.9864C24.4398 7.34226 25.1711 7.94496 25.6825 8.70029C26.194 9.45737 26.4891 10.3488 26.49 11.3378L26.49 1.03357C25.0432 0.373308 23.4336 -0.000870688 21.7495 1.52143e-06Z"
+                fill="white"
+              />
+              <path
+                d="M33.1324 11.3386C33.1333 9.78255 32.8136 8.28235 32.2365 6.92431C31.3704 4.88509 29.9306 3.16073 28.116 1.93964C27.6046 1.59511 27.0581 1.29507 26.4897 1.03516V11.3386L26.4897 14.5858V29.6916C26.4897 31.5189 27.9768 32.9999 29.8115 32.9999C31.6462 32.9999 33.1333 31.5189 33.1333 29.6916L33.1324 11.3386Z"
+                fill="white"
+              />
+              <path
+                d="M4.14169 32.9832C6.42908 32.9832 8.28337 31.1367 8.28337 28.8588C8.28337 26.5809 6.42908 24.7344 4.14169 24.7344C1.8543 24.7344 0 26.5809 0 28.8588C0 31.1367 1.8543 32.9832 4.14169 32.9832Z"
+                fill="white"
+              />
+              <path
+                d="M14.6964 24.5208C18.1275 24.5208 20.9089 21.7507 20.9089 18.3336C20.9089 14.9166 18.1275 12.1465 14.6964 12.1465C11.2653 12.1465 8.48389 14.9166 8.48389 18.3336C8.48389 21.7507 11.2653 24.5208 14.6964 24.5208Z"
+                fill="white"
+              />
+              <path
+                d="M39.7603 26.1468V6.85547L53.3195 6.85547V9.28072L42.1677 9.28072V15.2885L50.8843 15.2885V17.7138H42.1677V23.7492L53.3195 23.7492V26.1468L39.7603 26.1468Z"
+                fill="white"
+              />
+              <path
+                d="M68.8489 30.9688V23.5556C67.3912 25.6132 65.4541 26.6421 63.0378 26.6421C60.9717 26.6421 59.2372 25.8613 57.835 24.2998C56.4696 22.8115 55.7869 21.0197 55.7869 18.9255C55.7869 16.8492 56.4785 15.0494 57.8619 13.5236C59.2452 11.9799 60.9708 11.209 63.0369 11.209C65.472 11.209 67.4091 12.2378 68.848 14.2954V11.6774H71.2831V30.9688H68.8489ZM67.2711 15.177C66.2381 14.1295 64.9927 13.6066 63.535 13.6066C62.0585 13.6066 60.7952 14.1303 59.7443 15.177C59.2273 15.7097 58.8402 16.279 58.5822 16.8857C58.3233 17.4916 58.1943 18.1724 58.1943 18.9255C58.1943 20.3585 58.7103 21.6086 59.7443 22.674C60.7773 23.7028 62.0415 24.2177 63.535 24.2177C65.0106 24.2177 66.256 23.7037 67.2711 22.674C68.3229 21.6265 68.848 20.3773 68.848 18.9255C68.8489 17.4747 68.3229 16.2246 67.2711 15.177Z"
+                fill="white"
+              />
+              <path
+                d="M83.9077 26.1462V24.5205C82.7636 25.9357 81.3158 26.6424 79.5633 26.6424C77.921 26.6424 76.5287 25.999 75.3846 24.7132C74.296 23.5006 73.7522 22.0497 73.7522 20.3588V11.6777H76.1596V20.3588C76.1596 21.443 76.5466 22.3522 77.3216 23.0875C78.0778 23.8415 78.9818 24.2171 80.0337 24.2171C81.1034 24.2171 82.0164 23.8406 82.7735 23.0875C83.5297 22.3344 83.9077 21.4251 83.9077 20.3588V11.6777H86.3429V26.1462H83.9077Z"
+                fill="white"
+              />
+              <path
+                d="M91.7168 9.26614C91.3844 9.58737 90.9786 9.74798 90.4992 9.74798C90.019 9.74798 89.6185 9.58737 89.296 9.26614C88.9726 8.94492 88.8113 8.54517 88.8113 8.0669C88.8113 7.58953 88.9726 7.18978 89.296 6.86856C89.6185 6.54733 90.0199 6.38672 90.4992 6.38672C90.9786 6.38672 91.3844 6.54733 91.7168 6.86856C92.0492 7.18978 92.215 7.58953 92.215 8.0669C92.2141 8.54606 92.0483 8.94492 91.7168 9.26614ZM89.3085 26.1465V11.678H91.7159V26.1465H89.3085Z"
+                fill="white"
+              />
+              <path
+                d="M113.166 29.1782C112.557 30.7032 111.422 31.4652 109.762 31.4652C109.448 31.4652 109.043 31.3822 108.544 31.2171V28.7919C109.043 28.957 109.448 29.0399 109.762 29.0399C110.334 29.0399 110.703 28.8195 110.868 28.3788L111.781 26.1462L105.915 11.6777H108.516L113.081 22.9492L117.647 11.6777H120.276L113.166 29.1782Z"
+                fill="white"
+              />
+              <path
+                d="M122.69 26.1468V6.85547H125.097V23.7492L133.814 23.7492V26.1468L122.69 26.1468Z"
+                fill="white"
+              />
+              <path
+                d="M139.223 9.26614C138.891 9.58737 138.485 9.74798 138.006 9.74798C137.526 9.74798 137.125 9.58737 136.803 9.26614C136.479 8.94492 136.318 8.54517 136.318 8.0669C136.318 7.58953 136.479 7.18978 136.803 6.86856C137.125 6.54733 137.526 6.38672 138.006 6.38672C138.485 6.38672 138.891 6.54733 139.223 6.86856C139.556 7.18978 139.722 7.58953 139.722 8.0669C139.721 8.54606 139.555 8.94492 139.223 9.26614ZM136.815 26.1465V11.678H139.223V26.1465H136.815Z"
+                fill="white"
+              />
+              <path
+                d="M151.918 25.5677C151.328 25.9175 150.705 26.1834 150.05 26.3672C149.395 26.551 148.68 26.6429 147.905 26.6429C147.13 26.6429 146.411 26.551 145.747 26.3672C145.083 26.1834 144.455 25.9175 143.865 25.5677C142.519 24.7227 141.845 23.5931 141.845 22.1779H144.252C144.252 22.9498 144.704 23.5101 145.608 23.859C146.162 24.0981 146.927 24.2168 147.905 24.2168C150.322 24.2168 151.53 23.5378 151.53 22.177C151.53 21.2223 150.718 20.5879 149.095 20.2756C147.656 19.982 146.563 19.7562 145.816 19.6001C145.069 19.4439 144.639 19.3476 144.529 19.311C142.906 18.6864 142.094 17.4648 142.094 15.6455C142.094 14.249 142.74 13.1372 144.031 12.311C145.12 11.5766 146.411 11.209 147.905 11.209C149.363 11.209 150.654 11.5766 151.779 12.311C153.07 13.156 153.716 14.2678 153.716 15.6455H151.281C151.281 14.9289 150.875 14.3873 150.063 14.0197C149.473 13.744 148.754 13.6066 147.905 13.6066C147.057 13.6066 146.328 13.744 145.719 14.0197C144.907 14.3873 144.501 14.9289 144.501 15.6455C144.501 16.6198 145.322 17.2623 146.964 17.5746C148.403 17.869 149.496 18.0939 150.244 18.2501C150.991 18.4062 151.41 18.5026 151.502 18.5392C153.126 19.1638 153.938 20.3764 153.938 22.177C153.938 23.5922 153.265 24.7227 151.918 25.5677Z"
+                fill="white"
+              />
+              <path
+                d="M103.489 14.5114L99.7952 14.5114V22.0076C99.7952 22.6902 99.9296 23.1738 100.197 23.4593C100.465 23.7457 100.878 23.893 101.434 23.9019C101.989 23.9117 102.674 23.8974 103.489 23.86V26.0175C101.378 26.2941 99.8319 26.1237 98.8508 25.5062C97.8689 24.8888 97.3788 23.7217 97.3788 22.0067V14.5105H94.6292V12.187H97.3788V9.03364L99.7952 8.31445V12.187L103.489 12.187V14.5114Z"
+                fill="white"
+              />
+              <path
+                d="M165 14.5114L161.306 14.5114V22.0076C161.306 22.6902 161.44 23.1738 161.708 23.4593C161.976 23.7457 162.389 23.893 162.945 23.9019C163.5 23.9117 164.185 23.8974 165 23.86V26.0175C162.889 26.2941 161.343 26.1237 160.362 25.5062C159.38 24.8888 158.89 23.7217 158.89 22.0067V14.5105H156.14V12.187H158.89V9.03364L161.306 8.31445V12.187L165 12.187V14.5114Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+        </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="absolute border border-[#919191] border-solid h-[967px] left-[757px] opacity-33 top-[103px] w-[737px]"
+        ></div>
+        <div
+          class="absolute border border-[#919191] border-solid h-[967px] left-[10px] opacity-33 top-[103px] w-[737px]"
+        ></div>
+        <div class="absolute h-0 left-[10px] top-[847px] w-[737px]">
+          <div class="absolute inset-[-0.5px_0]">
+            <svg
+              class="block size-full"
+              fill="none"
+              preserveAspectRatio="none"
+              viewBox="0 0 736 1"
+            >
+              <path
+                d="M0 0.5H736"
+                id="Vector 82"
+                opacity="0.33"
+                stroke="var(--stroke-0, #919191)"
+              ></path>
+            </svg>
+          </div>
+        </div>
+        <p
+          class="absolute font-['Inter:Bold',sans-serif] font-bold leading-[0.9] left-[290px] not-italic text-[#0d0d0d] text-[40px] top-[28px] tracking-[-1.2px]"
+        >
+          SAFE Calculator Report
+        </p>
+        <div
+          class="absolute leading-[0.9] right-[50px] text-right top-[26px] tracking-[-0.6px]"
+        >
+          <p
+            class="font-['Inter:Medium',sans-serif] font-medium text-black text-[20px]"
+          >
+            Generated on
+          </p>
+          <p
+            class="font-['Inter:Regular',sans-serif] font-normal text-[#6c6c6c] text-[20px] timestamp-value mt-1"
+          >
+            February 4, 2026 at 07:04 PM
+          </p>
+        </div>
+        <p
+          class="absolute font-['Inter:Semi_Bold',sans-serif] font-semibold leading-[0.9] left-[31px] not-italic text-[#4039a8] text-[30px] top-[133px] tracking-[-0.9px] uppercase"
+        >
+          Ownership Split after <span class="display-round-name"></span>
+        </p>
+        <p
+          class="absolute font-['Inter:Semi_Bold',sans-serif] font-semibold leading-[0] left-[777px] not-italic text-[#4039a8] text-[0px] top-[133px] tracking-[-0.9px] uppercase"
+        >
+          <span class="leading-[0.9] text-[30px]">Founder ownership </span
+          ><span class="leading-[0.9] text-[#6c6c6c] text-[20px]"
+            >before vs after <span class="display-round-name"></span></span
+          >
+        </p>
+        <div class="absolute contents left-[1504px] top-[103px]">
+          <div
+            class="absolute border border-[#919191] border-solid h-[967px] left-[1504px] opacity-33 top-[103px] w-[406px]"
+          ></div>
+          <div class="absolute h-0 left-[1504px] top-[190px] w-[406px]">
+            <div class="absolute inset-[-0.5px_0]">
+              <svg
+                class="block size-full"
+                fill="none"
+                preserveAspectRatio="none"
+                viewBox="0 0 406 1"
+              >
+                <path
+                  d="M0 0.5H406"
+                  id="Vector 83"
+                  opacity="0.33"
+                  stroke="var(--stroke-0, #919191)"
+                ></path>
+              </svg>
+            </div>
+          </div>
+          <div class="absolute h-0 left-[1504px] top-[388px] w-[406px]">
+            <div class="absolute inset-[-0.5px_0]">
+              <svg
+                class="block size-full"
+                fill="none"
+                preserveAspectRatio="none"
+                viewBox="0 0 406 1"
+              >
+                <path
+                  d="M0 0.5H406"
+                  id="Vector 83"
+                  opacity="0.33"
+                  stroke="var(--stroke-0, #919191)"
+                ></path>
+              </svg>
+            </div>
+          </div>
+          <div
+            class="-translate-y-1/2 absolute h-0 left-[1504px] top-[calc(50%+46px)] w-[406px]"
+          >
+            <div class="absolute inset-[-0.5px_0]">
+              <svg
+                class="block size-full"
+                fill="none"
+                preserveAspectRatio="none"
+                viewBox="0 0 406 1"
+              >
+                <path
+                  d="M0 0.5H406"
+                  id="Vector 83"
+                  opacity="0.33"
+                  stroke="var(--stroke-0, #919191)"
+                ></path>
+              </svg>
+            </div>
+          </div>
+          <div class="absolute h-0 left-[1517px] top-[748px] w-[380px]">
+            <div class="absolute inset-[-0.25px_0]">
+              <svg
+                class="block size-full"
+                fill="none"
+                preserveAspectRatio="none"
+                viewBox="0 0 380 0.5"
+              >
+                <path
+                  d="M0 0.25H380"
+                  id="Vector 86"
+                  opacity="0.33"
+                  stroke="var(--stroke-0, #919191)"
+                  stroke-width="0.5"
+                ></path>
+              </svg>
+            </div>
+          </div>
+          <div class="absolute h-0 left-[1517px] top-[910px] w-[380px]">
+            <div class="absolute inset-[-0.25px_0]">
+              <svg
+                class="block size-full"
+                fill="none"
+                preserveAspectRatio="none"
+                viewBox="0 0 380 0.5"
+              >
+                <path
+                  d="M0 0.25H380"
+                  id="Vector 86"
+                  opacity="0.33"
+                  stroke="var(--stroke-0, #919191)"
+                  stroke-width="0.5"
+                ></path>
+              </svg>
+            </div>
+          </div>
+          <p
+            class="absolute font-['Inter:Semi_Bold',sans-serif] font-semibold leading-[0.9] left-[1524px] not-italic text-[#4039a8] text-[30px] top-[133px] tracking-[-0.9px] uppercase"
+          >
+            Founder Outcome
+          </p>
+          <div
+            class="absolute contents leading-[0.9] left-[1523px] not-italic top-[240px]"
+          >
+            <p
+              id="outcome-ownership"
+              class="absolute font-['Inter:Bold',sans-serif] font-bold left-[1523px] text-[#4039a8] text-[94px] top-[240px] tracking-[-2.82px] uppercase"
+            >
+              00.00%
+            </p>
+            <p
+              class="absolute font-['Inter:Medium',sans-serif] font-medium left-[1527px] text-[#6c6c6c] text-[20px] top-[323px] tracking-[-0.6px]"
+            >
+              ownership after <span class="display-round-name"></span>
+            </p>
+          </div>
+          <div
+            class="absolute contents leading-[0.9] left-[1523px] not-italic top-[438px]"
+          >
+            <p
+              id="outcome-dilution"
+              class="absolute font-['Inter:Bold',sans-serif] font-bold left-[1523px] text-[#0d0d0d] text-[94px] top-[438px] tracking-[-2.82px] uppercase"
+            >
+              00.00%
+            </p>
+            <p
+              class="absolute font-['Inter:Medium',sans-serif] font-medium left-[1527px] text-[#6c6c6c] text-[20px] top-[521px] tracking-[-0.6px]"
+            >
+              Founder dilution <span class="display-round-name"></span>
+            </p>
+          </div>
+          <div
+            class="absolute contents leading-[0.9] left-[1523px] not-italic top-[640px]"
+          >
+            <p
+              id="outcome-postmoney"
+              class="absolute font-['Inter:Bold',sans-serif] font-bold left-[1523px] text-[#494949] text-[40px] top-[665px] tracking-[-1.2px] uppercase"
+            >
+              $000,000,000
+            </p>
+            <p
+              class="absolute font-['Inter:Medium',sans-serif] font-medium left-[1527px] text-[#6c6c6c] text-[20px] top-[640px] tracking-[-0.6px]"
+            >
+              post-money
+            </p>
+          </div>
+          <div
+            class="absolute contents leading-[0.9] left-[1523px] not-italic top-[802px]"
+          >
+            <p
+              id="outcome-pps"
+              class="absolute font-['Inter:Bold',sans-serif] font-bold left-[1523px] text-[#494949] text-[40px] top-[827px] tracking-[-1.2px] uppercase"
+            >
+              $0.463
+            </p>
+            <p
+              class="absolute font-['Inter:Medium',sans-serif] font-medium left-[1527px] text-[#6c6c6c] text-[20px] top-[802px] tracking-[-0.6px]"
+            >
+              price per share
+            </p>
+          </div>
+          <div
+            class="absolute contents leading-[0.9] left-[1523px] not-italic top-[964px]"
+          >
+            <p
+              id="outcome-totalshares"
+              class="absolute font-['Inter:Bold',sans-serif] font-bold left-[1523px] text-[#494949] text-[40px] top-[989px] tracking-[-1.2px] uppercase"
+            >
+              000,000,000
+            </p>
+            <p
+              class="absolute font-['Inter:Medium',sans-serif] font-medium left-[1527px] text-[#6c6c6c] text-[20px] top-[964px] tracking-[-0.6px]"
+            >
+              total shares
+            </p>
+          </div>
+        </div>
+        <div class="absolute h-0 left-[757px] top-[190px] w-[737px]">
+          <div class="absolute inset-[-0.5px_0]">
+            <svg
+              class="block size-full"
+              fill="none"
+              preserveAspectRatio="none"
+              viewBox="0 0 737 1"
+            >
+              <path
+                d="M0 0.5H737"
+                id="Vector 83"
+                opacity="0.33"
+                stroke="var(--stroke-0, #919191)"
+              ></path>
+            </svg>
+          </div>
+        </div>
+        <div class="absolute h-0 left-[10px] top-[190px] w-[737px]">
+          <div class="absolute inset-[-0.5px_0]">
+            <svg
+              class="block size-full"
+              fill="none"
+              preserveAspectRatio="none"
+              viewBox="0 0 736 1"
+            >
+              <path
+                d="M0 0.5H736"
+                id="Vector 84"
+                opacity="0.33"
+                stroke="var(--stroke-0, #919191)"
+              ></path>
+            </svg>
+          </div>
+        </div>
+        <div class="absolute left-[10px] top-[191px] w-[737px] h-[750px] pointer-events-none">
+          <div class="absolute left-1/2 -translate-x-1/2 top-[78px] w-[500px] h-[500px] pointer-events-auto">
+            <canvas id="pieChartCanvas" class="size-full"></canvas>
+          </div>
+          <div
+            id="doughnut-legend"
+            class="absolute left-1/2 -translate-x-1/2 top-[686px] w-[680px] grid grid-cols-3 gap-y-4 pointer-events-auto"
+          >
+            <!-- Legend will be injected here -->
+          </div>
+        </div>
+        <div
+          class="absolute bg-white border border-[rgba(145,145,145,0.33)] border-solid h-[880px] left-[757px] overflow-clip top-[190px] w-[737px]"
+        >
+          <div
+            class="-translate-x-1/2 absolute h-[880px] left-1/2 top-[-1px] w-[737px]"
+          >
+            <svg
+              class="block size-full"
+              fill="none"
+              preserveAspectRatio="none"
+              viewBox="0 0 737 880"
+            >
+              <g id="GridLines">
+                <!-- Vertical border lines aligned to axis/canvas edges (67.5 and 669.5) -->
+                <path d="M67.5 65L67.5 805" stroke="#EBEBEB" stroke-width="0.5"></path>
+                <path d="M669.5 65L669.5 805" stroke="#EBEBEB" stroke-width="0.5"></path>
+                <!-- Horizontal Grid Lines every 10% (from 100% down to 0%) aligned to 67.5-669.5 -->
+                <path d="M67.5 65L669.5 65" stroke="#EBEBEB" stroke-width="0.5"></path>
+                <path d="M67.5 139L669.5 139" stroke="#EBEBEB" stroke-width="0.5"></path>
+                <path d="M67.5 213L669.5 213" stroke="#EBEBEB" stroke-width="0.5"></path>
+                <path d="M67.5 287L669.5 287" stroke="#EBEBEB" stroke-width="0.5"></path>
+                <path d="M67.5 361L669.5 361" stroke="#EBEBEB" stroke-width="0.5"></path>
+                <path d="M67.5 435L669.5 435" stroke="#EBEBEB" stroke-width="0.5"></path>
+                <path d="M67.5 509L669.5 509" stroke="#EBEBEB" stroke-width="0.5"></path>
+                <path d="M67.5 583L669.5 583" stroke="#EBEBEB" stroke-width="0.5"></path>
+                <path d="M67.5 657L669.5 657" stroke="#EBEBEB" stroke-width="0.5"></path>
+                <path d="M67.5 731L669.5 731" stroke="#EBEBEB" stroke-width="0.5"></path>
+                <path d="M67.5 805L669.5 805" stroke="#EBEBEB" stroke-width="0.5"></path>
+              </g>
+            </svg>
+          </div>
+          <div
+            class="absolute left-1/2 -translate-x-1/2 top-[65px] w-[602px] h-[740px]"
+          >
+            <canvas id="barChartCanvas"></canvas>
+          </div>
+          <!-- Y-Axis Line aligned to 67.5 -->
+          <div
+            class="-translate-x-1/2 absolute h-[740px] left-[calc(50%-301px)] top-[65px] w-0"
+          >
+            <div class="absolute inset-[0_-0.5px]">
+              <svg
+                class="block size-full"
+                fill="none"
+                preserveAspectRatio="none"
+                viewBox="0 0 1 740"
+              >
+                <path
+                  d="M0.5 0V740"
+                  id="Vector 95"
+                  stroke="var(--stroke-0, #2E2E2E)"
+                ></path>
+              </svg>
+            </div>
+          </div>
+          <!-- X-Axis Line aligned to canvas width 602 -->
+          <div
+            class="-translate-x-1/2 -translate-y-1/2 absolute flex h-0 items-center justify-center left-1/2 top-[805px] w-[602px]"
+          >
+            <div class="flex-none rotate-90">
+              <div class="h-[602px] relative w-0">
+                <div class="absolute inset-[0_-0.5px]">
+                  <svg
+                    class="block size-full"
+                    fill="none"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 1 602"
+                  >
+                    <path
+                      d="M0.5 0V602"
+                      id="Vector 96"
+                      stroke="var(--stroke-0, #2E2E2E)"
+                    ></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Ticks aligned to 67.5 -->
+          <div
+            class="-translate-x-1/2 absolute h-[740px] left-[calc(50%-301px)] top-[65px] w-[11px]"
+          >
+            <svg
+              class="block size-full"
+              fill="none"
+              preserveAspectRatio="none"
+              viewBox="0 0 11 740"
+            >
+              <g id="Ticks">
+                <path d="M0 0H11" stroke="black"></path>
+                <path d="M0 74H11" stroke="black"></path>
+                <path d="M0 148H11" stroke="black"></path>
+                <path d="M0 222H11" stroke="black"></path>
+                <path d="M0 296H11" stroke="black"></path>
+                <path d="M0 370H11" stroke="black"></path>
+                <path d="M0 444H11" stroke="black"></path>
+                <path d="M0 518H11" stroke="black"></path>
+                <path d="M0 592H11" stroke="black"></path>
+                <path d="M0 666H11" stroke="black"></path>
+                <path d="M0 740H11" stroke="black"></path>
+              </g>
+            </svg>
+          </div>
+          <!-- Labels perfectly centered on ticks (-6px magic number removed in favor of -translate-y-1/2) -->
+          <p class="-translate-x-full -translate-y-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-none left-[calc(50%-311px)] not-italic text-[12px] text-black text-right top-[805px]">0</p>
+          <p class="-translate-x-full -translate-y-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-none left-[calc(50%-311px)] not-italic text-[12px] text-black text-right top-[731px]">10</p>
+          <p class="-translate-x-full -translate-y-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-none left-[calc(50%-311px)] not-italic text-[12px] text-black text-right top-[657px]">20</p>
+          <p class="-translate-x-full -translate-y-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-none left-[calc(50%-311px)] not-italic text-[12px] text-black text-right top-[583px]">30</p>
+          <p class="-translate-x-full -translate-y-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-none left-[calc(50%-311px)] not-italic text-[12px] text-black text-right top-[509px]">40</p>
+          <p class="-translate-x-full -translate-y-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-none left-[calc(50%-311px)] not-italic text-[12px] text-black text-right top-[435px]">50</p>
+          <p class="-translate-x-full -translate-y-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-none left-[calc(50%-311px)] not-italic text-[12px] text-black text-right top-[361px]">60</p>
+          <p class="-translate-x-full -translate-y-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-none left-[calc(50%-311px)] not-italic text-[12px] text-black text-right top-[287px]">70</p>
+          <p class="-translate-x-full -translate-y-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-none left-[calc(50%-311px)] not-italic text-[12px] text-black text-right top-[213px]">80</p>
+          <p class="-translate-x-full -translate-y-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-none left-[calc(50%-311px)] not-italic text-[12px] text-black text-right top-[139px]">90</p>
+          <p class="-translate-x-full -translate-y-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-none left-[calc(50%-311px)] not-italic text-[12px] text-black text-right top-[65px]">100</p>
+          <p
+            id="bar-pre-label"
+            class="-translate-x-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-[0.848] left-[calc(50%-150px)] not-italic text-[15px] text-black text-center top-[826px]"
+          >
+            Pre-round
+          </p>
+          <p
+            id="bar-pre-pct"
+            class="-translate-x-1/2 -translate-y-full absolute font-['Inter:Bold',sans-serif] font-bold leading-[0.848] left-[calc(50%-150px)] not-italic text-[#5c5c5c] text-[30px] text-center mb-[10px] pb-[12px] pt-[12px]"
+          >
+            0.0%
+          </p>
+          <p
+            id="bar-post-pct"
+            class="-translate-x-1/2 -translate-y-full absolute font-['Inter:Bold',sans-serif] font-bold leading-[0.848] left-[calc(50%+150px)] not-italic text-[#5c5c5c] text-[30px] text-center mb-[10px] pb-[12px] pt-[12px]"
+          >
+            0.0%
+          </p>
+          <p
+            id="bar-post-label"
+            class="-translate-x-1/2 absolute font-['Inter:Bold',sans-serif] font-bold leading-[0.848] left-[calc(50%+150px)] not-italic text-[15px] text-black text-center top-[826px]"
+          >
+            Post-round
+          </p>
+          <div
+            class="-translate-y-1/2 absolute flex h-0 items-center justify-center left-[-1px] top-[65px] w-[34px]"
+            style="
+              --transform-inner-width: 1184.796875;
+              --transform-inner-height: 154;
+            "
+          >
+            <div class="flex-none rotate-90">
+              <div class="h-[34px] relative w-0">
+                <div class="absolute inset-[0_-0.25px]">
+                  <svg
+                    class="block size-full"
+                    fill="none"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 0.5 34"
+                  >
+                    <path
+                      d="M0.25 0V34"
+                      id="Vector 92"
+                      stroke="var(--stroke-0, #C2C2C2)"
+                      stroke-width="0.5"
+                    ></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            class="-translate-x-1/2 -translate-y-1/2 absolute flex h-[109px] items-center justify-center left-[19px] top-[435px] w-[14px]"
+          >
+            <div class="-rotate-90 flex-none">
+              <p
+                class="font-['Inter:Bold',sans-serif] font-bold leading-[0.848] not-italic relative text-[#5c5c5c] text-[16.778px] text-center"
+              >
+                Ownership %
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

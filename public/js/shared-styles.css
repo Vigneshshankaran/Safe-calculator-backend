@@ -1,0 +1,59 @@
+/* Shared Report Styles */
+:root {
+  --primary-purple: #4039a8;
+  --text-dark: #0d0d0d;
+  --text-gray: #6c6c6c;
+  --bg-light: #f7f5fd;
+  --border-color: #919191;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #f0f0f0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+}
+
+.report-page-container {
+  width: 1920px;
+  height: 1080px;
+  position: relative;
+  background: white;
+  margin: 0 auto;
+  overflow: hidden;
+  box-shadow: 0 0 50px rgba(0,0,0,0.1);
+}
+
+/* Ensure consistent header scaling and positioning */
+.header-bar-purple {
+  position: absolute;
+  background: var(--primary-purple);
+  height: 103px;
+  left: 0;
+  top: 0;
+  width: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.header-bar-white {
+  position: absolute;
+  border-bottom: 3px solid var(--primary-purple);
+  background: white;
+  height: 103px;
+  left: 260px;
+  top: 0;
+  width: 1660px;
+  z-index: 5;
+}
+
+/* Utility for dynamic text */
+.timestamp-value {
+    color: var(--text-gray);
+}

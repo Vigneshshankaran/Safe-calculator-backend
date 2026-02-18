@@ -1,0 +1,80 @@
+const nodemailer = require('nodemailer');
+
+/**
+ * Sends a high-quality PDF report via Gmail SMTP using Nodemailer.
+ */
+async function sendPDFReport(to_email, pdfBase64, summaryData) {
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
+        throw new Error('GMAIL_USER or GMAIL_PASS is not defined in the .env file.');
+    }
+
+    // Create transporter using Gmail service
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_PASS
+        }
+    });
+
+    const firstName = summaryData.firstName 
+        ? summaryData.firstName.charAt(0).toUpperCase() + summaryData.firstName.slice(1) 
+        : 'there';
+
+    const mailOptions = {
+        from: { name: "EquityList SAFE Calculator", address: process.env.GMAIL_USER },
+        to: [to_email],
+        subject: `Your SAFE calculator results | EquityList`,
+        html: `
+            <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #1e293b; line-height: 1.6;">
+                <p>Hi ${firstName},</p>
+                <p>Thank you for using EquityList’s SAFE Calculator.</p>
+                <p>Here’s a quick summary of the outcome you modeled:</p>
+                <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin: 24px 0; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Founder ownership post-round</td>
+                            <td style="padding: 8px 0; text-align: right; color: #1e293b; font-weight: 600; font-size: 14px;">${summaryData.founderOwnership}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Total founder dilution</td>
+                            <td style="padding: 8px 0; text-align: right; color: #1e293b; font-weight: 600; font-size: 14px;">${summaryData.founderDilution}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Post-money valuation</td>
+                            <td style="padding: 8px 0; text-align: right; color: #1e293b; font-weight: 600; font-size: 14px;">${summaryData.postMoney}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Total raised (SAFEs + priced round)</td>
+                            <td style="padding: 8px 0; text-align: right; color: #1e293b; font-weight: 600; font-size: 14px;">${summaryData.totalRaised}</td>
+                        </tr>
+                    </table>
+                </div>
+                <p>We’ve attached the full calculation, including the post-round cap table, SAFE conversion, option pool impact, and investor ownership.</p>
+                <br>
+                <p style="margin-bottom: 4px;">Best,</p>
+                <p style="margin-top: 0;"><strong>Farheen, EquityList</strong><br><a href="https://equitylist.co" style= "text-decoration: none; font-weight: 600;">(Book a demo)</a></p>
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 40px 0;">
+                <p style="font-size: 12px; color: #94a3b8; line-height: 1.5; font-style: italic;">
+                    Note: This is a modeled outcome based on the assumptions you entered. Final results may vary based on documentation and execution.
+                </p>
+            </div>
+        `,
+        attachments: [
+            {
+                filename: `SAFE_Equity_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+                content: pdfBase64,
+                encoding: 'base64',
+                contentType: 'application/pdf'
+            }
+        ]
+    };
+
+    console.log(`Attempting to send email to ${to_email}...`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Email successfully sent! MessageId: ${info.messageId}`);
+    return info;
+}
+
+module.exports = { sendPDFReport };
+
