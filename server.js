@@ -312,7 +312,7 @@ if (document.readyState === "complete" || document.readyState === "interactive")
     
     // Fallback path list
     const potentialPaths = [
-        process.env.PUPPETEER_EXECUTABLE_PATH, // Highest priority (set in Railway/Nixpacks)
+        process.env.PUPPETEER_EXECUTABLE_PATH, // Highest priority
         '/usr/bin/google-chrome',
         '/usr/bin/chromium',
         '/usr/bin/chromium-browser',
@@ -322,13 +322,24 @@ if (document.readyState === "complete" || document.readyState === "interactive")
         process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe'
     ].filter(Boolean);
 
-    // If on Linux, we try system paths FIRST because Sparticuz is often problematic in containers
+    // Dynamic detection on Linux
     if (isLinux) {
         console.log('Linux detected, searching for system Chromium...');
+        const cp = require('child_process');
+        try {
+            const foundPath = cp.execSync('which chromium || which google-chrome-stable || which google-chrome', { encoding: 'utf8' }).trim();
+            if (foundPath && !potentialPaths.includes(foundPath)) {
+                console.log(`Dynamic detection found browser at: ${foundPath}`);
+                potentialPaths.unshift(foundPath);
+            }
+        } catch (e) {
+            console.warn('Dynamic browser detection failed (which command not found or no matches).');
+        }
+
         for (const path of potentialPaths) {
             try {
                 if (fs.existsSync(path)) {
-                    console.log(`Attempting launch with system path: ${path}`);
+                    console.log(`Attempting launch with path: ${path}`);
                     browser = await puppeteer.launch({
                         executablePath: path,
                         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],

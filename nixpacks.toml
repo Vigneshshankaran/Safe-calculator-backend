@@ -1,6 +1,10 @@
 [phases.setup]
-nixPkgs = ["nodejs", "chromium", "glib", "nss", "nspr", "atk", "at-spi2-atk", "libdrm", "expat", "libxcb", "libxshmfence"]
+nixPkgs = ["nodejs", "chromium", "glib", "nss", "nspr", "atk", "at-spi2-atk", "libdrm", "expat", "libxcb", "libxshmfence", "pango", "cairo"]
+
+[phases.build]
+cmds = ["npm install"]
 
 [variables]
-PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium"
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+# Nix installs these in specific locations, we need to help the dynamic linker
+LD_LIBRARY_PATH = "/usr/lib:/usr/local/lib"
