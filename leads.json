@@ -214,5 +214,21 @@
     "email": "vigneshganesha@gmail.com",
     "company": "Spark Capital",
     "newsletter": true
+  },
+  {
+    "timestamp": "2026-02-19T12:39:06.358Z",
+    "firstName": "Vignesh",
+    "lastName": "S",
+    "email": "vigneshganesha@gmail.com",
+    "company": "Spark Capital",
+    "newsletter": false
+  },
+  {
+    "timestamp": "2026-02-19T13:27:19.200Z",
+    "firstName": "Vignesh",
+    "lastName": "",
+    "email": "vigneshganesha@gmail.com",
+    "company": "",
+    "newsletter": false
   }
 ]
