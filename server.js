@@ -308,71 +308,94 @@ if (document.readyState === "complete" || document.readyState === "interactive")
 
     // 2. Launch Puppeteer
     let browser;
-    try {
-        console.log('Attempting to launch with @sparticuz/chromium (Production/Vercel)...');
-        const executablePath = await chromium.executablePath();
-        browser = await puppeteer.launch({
-            args: [...chromium.args, '--disable-web-security', '--allow-file-access-from-files'],
-            defaultViewport: { width: 1920, height: 1080 },
-            executablePath: executablePath,
-            headless: chromium.headless,
-            ignoreHTTPSErrors: true,
-        });
-        console.log('Successfully launched with @sparticuz/chromium.');
-    } catch (launchError) {
-        console.warn('Sparticuz launch failed, trying fallback discovery...', launchError.message);
-        
-        const potentialPaths = [
-            // Local Chrome channel (Puppeteer default discovery)
-            'CHROME_CHANNEL',
-            // Linux common paths
-            '/usr/bin/google-chrome',
-            '/usr/bin/chromium',
-            '/usr/bin/chromium-browser',
-            '/app/.apt/usr/bin/google-chrome', // Heroku/Render common path
-            // Windows common paths
-            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-            process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
-            // Environment variable
-            process.env.CHROME_PATH 
-        ].filter(Boolean);
+    const isLinux = process.platform === 'linux';
+    
+    // Fallback path list
+    const potentialPaths = [
+        process.env.PUPPETEER_EXECUTABLE_PATH, // Highest priority (set in Railway/Nixpacks)
+        '/usr/bin/google-chrome',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/app/.apt/usr/bin/google-chrome', 
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe'
+    ].filter(Boolean);
 
-        let lastErr;
+    // If on Linux, we try system paths FIRST because Sparticuz is often problematic in containers
+    if (isLinux) {
+        console.log('Linux detected, searching for system Chromium...');
         for (const path of potentialPaths) {
             try {
-                if (path === 'CHROME_CHANNEL') {
-                    console.log('Trying launch with channel: chrome...');
-                    browser = await puppeteer.launch({
-                        channel: 'chrome',
-                        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],
-                        defaultViewport: { width: 1920, height: 1080 },
-                        headless: true,
-                    });
-                } else if (fs.existsSync(path)) {
-                    console.log(`Trying launch with executablePath: ${path}...`);
+                if (fs.existsSync(path)) {
+                    console.log(`Attempting launch with system path: ${path}`);
                     browser = await puppeteer.launch({
                         executablePath: path,
                         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],
                         defaultViewport: { width: 1920, height: 1080 },
                         headless: true,
                     });
-                }
-                
-                if (browser) {
-                    console.log(`Successfully launched Chromium using: ${path}`);
-                    break;
+                    if (browser) break;
                 }
             } catch (e) {
                 console.warn(`Failed to launch at ${path}:`, e.message);
-                lastErr = e;
             }
         }
+    }
 
-        if (!browser) {
-            console.error('All Puppeteer launch attempts failed.');
-            throw lastErr || new Error('Could not find a valid Chrome/Chromium executable on this system.');
+    // If still no browser (not Linux or system paths failed), try Sparticuz (Production/Vercel)
+    if (!browser) {
+        try {
+            console.log('Attempting to launch with @sparticuz/chromium (Vercel/Lambda fallback)...');
+            const executablePath = await chromium.executablePath();
+            browser = await puppeteer.launch({
+                args: [...chromium.args, '--disable-web-security', '--allow-file-access-from-files'],
+                defaultViewport: { width: 1920, height: 1080 },
+                executablePath: executablePath,
+                headless: chromium.headless,
+                ignoreHTTPSErrors: true,
+            });
+            console.log('Successfully launched with @sparticuz/chromium.');
+        } catch (launchError) {
+            console.warn('Sparticuz launch failed, trying final discovery...', launchError.message);
+            
+            // Final attempt: Try channel/any remaining paths
+            try {
+                console.log('Trying launch with channel: chrome...');
+                browser = await puppeteer.launch({
+                    channel: 'chrome',
+                    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],
+                    defaultViewport: { width: 1920, height: 1080 },
+                    headless: true,
+                });
+            } catch (e) {
+                console.warn('Chrome channel failed.');
+            }
+
+            // If still nothing, try the paths list one last time (e.g. for Windows if not caught)
+            if (!browser && !isLinux) {
+                for (const path of potentialPaths) {
+                    try {
+                        if (fs.existsSync(path)) {
+                            browser = await puppeteer.launch({
+                                executablePath: path,
+                                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],
+                                defaultViewport: { width: 1920, height: 1080 },
+                                headless: true,
+                            });
+                            if (browser) break;
+                        }
+                    } catch (e) {
+                        console.warn(`Final failure at ${path}:`, e.message);
+                    }
+                }
+            }
         }
+    }
+
+    if (!browser) {
+        console.error('All Puppeteer launch attempts failed.');
+        throw new Error('Could not find or launch a valid Chrome/Chromium executable.');
     }
 
     const page = await browser.newPage();
