@@ -93,7 +93,7 @@ async function sendPDFReport(to_email, pdfBase64, summaryData) {
             attachments: [
                 {
                     filename: `SAFE_Equity_Report_${Date.now()}.pdf`,
-                    content: pdfBase64, // Resend handles base64 automatically
+                    content: Buffer.from(pdfBase64, 'base64'),
                 }
             ]
         });
