@@ -190,5 +190,13 @@
     "email": "vignesh@equitylist.co",
     "company": "Spark Capital",
     "newsletter": true
+  },
+  {
+    "timestamp": "2026-02-19T11:59:17.288Z",
+    "firstName": "Vignesh",
+    "lastName": "S",
+    "email": "vigneshganesha@gmail.com",
+    "company": "Spark Capital",
+    "newsletter": true
   }
 ]
