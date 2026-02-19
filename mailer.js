@@ -48,14 +48,14 @@ async function sendPDFReport(to_email, pdfBase64, summaryData) {
 
     const transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
-        port: 465,
-        secure: true, // Use SSL
+        port: 587,
+        secure: false, // Use STARTTLS
         auth: {
             user: process.env.GMAIL_USER,
             pass: process.env.GMAIL_PASS
         },
-        connectionTimeout: 10000, // 10 seconds
-        greetingTimeout: 10000,
+        connectionTimeout: 20000, // 20 seconds
+        greetingTimeout: 20000,
         socketTimeout: 30000
     });
 
