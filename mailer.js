@@ -113,9 +113,19 @@ async function sendPDFReport(to_email, pdfBase64, summaryData) {
         ]
     };
 
-    console.log(`Attempting to send email to ${to_email}...`);
+    console.log(`[SMTP] Attempting to connect to ${mailOptions.host || 'smtp.gmail.com'} on port ${mailOptions.port || 587}...`);
+    
+    try {
+        await transporter.verify();
+        console.log('[SMTP] Connection verified successfully.');
+    } catch (verifyError) {
+        console.error('[SMTP] Verification FAILED:', verifyError.message);
+        throw verifyError;
+    }
+
+    console.log(`[SMTP] Sending email to ${to_email}...`);
     const info = await transporter.sendMail(mailOptions);
-    console.log(`Email successfully sent! MessageId: ${info.messageId}`);
+    console.log(`[SMTP] Email sent! MessageId: ${info.messageId}`);
     return info;
 }
 
