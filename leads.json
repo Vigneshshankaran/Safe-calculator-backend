@@ -158,5 +158,37 @@
     "firstName": "Server",
     "lastName": "Test",
     "email": "vignesh@equitylist.co"
+  },
+  {
+    "timestamp": "2026-02-19T11:45:54.860Z",
+    "firstName": "Vignesh",
+    "lastName": "S",
+    "email": "vignesh@equitylist.co",
+    "company": "Spark Capital",
+    "newsletter": true
+  },
+  {
+    "timestamp": "2026-02-19T11:46:43.510Z",
+    "firstName": "Vignesh",
+    "lastName": "S",
+    "email": "vignesh@equitylist.co",
+    "company": "Spark Capital",
+    "newsletter": true
+  },
+  {
+    "timestamp": "2026-02-19T11:47:15.985Z",
+    "firstName": "Vignesh",
+    "lastName": "S",
+    "email": "vignesh@equitylist.co",
+    "company": "Spark Capital",
+    "newsletter": true
+  },
+  {
+    "timestamp": "2026-02-19T11:47:19.543Z",
+    "firstName": "Vignesh",
+    "lastName": "S",
+    "email": "vignesh@equitylist.co",
+    "company": "Spark Capital",
+    "newsletter": true
   }
 ]
