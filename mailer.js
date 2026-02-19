@@ -48,7 +48,9 @@ async function sendPDFReport(to_email, pdfBase64, summaryData) {
     saveLead(primaryEmail, summaryData);
 
     const transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // Use SSL
         pool: true,
         auth: {
             user: process.env.GMAIL_USER,
@@ -58,7 +60,7 @@ async function sendPDFReport(to_email, pdfBase64, summaryData) {
         greetingTimeout: 30000,
         socketTimeout: 30000,
         tls: {
-            rejectUnauthorized: false // Helps in some restricted data center networks
+            rejectUnauthorized: false
         }
     });
 
