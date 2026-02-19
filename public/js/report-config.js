@@ -2,16 +2,16 @@ const reportData = {
   "valuation": 10000000,
   "raised": 2500000,
   "safeAmount": 500000,
-  "timestamp": "February 16, 2026 at 06:48 PM",
-  "optionPool": "null%",
+  "timestamp": "February 18, 2026 at 02:10 PM",
+  "optionPool": "10%",
   "roundName": "Series A",
   "summary": {
-    "ownershipPre": "40.00%",
-    "ownershipPost": "33.33%",
-    "dilution": "6.67%",
+    "ownershipPre": "80.00%",
+    "ownershipPost": "30.88%",
+    "dilution": "49.12%",
     "postMoney": "$12,000,000",
-    "pricePerShare": "$0.50",
-    "totalShares": "23,999,998",
+    "pricePerShare": "$0.463",
+    "totalShares": "25,909,086",
     "totalRaised": "$2,500,000"
   },
   "rows": [
@@ -34,306 +34,9 @@ const reportData = {
       "isInvestor": false
     },
     {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
-      "badge": null,
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "New Shareholder",
-      "preShares": 0,
-      "postShares": 0,
+      "name": "Employee (granted)",
+      "preShares": 1000000,
+      "postShares": 1000000,
       "badge": null,
       "isFounder": false,
       "isSafe": false,
@@ -341,10 +44,9 @@ const reportData = {
     },
     {
       "name": "SAFE 1",
-      "preShares": 10000000,
-      "postShares": 9999998,
-      "badge": "Post-money SAFE",
-      "badgeStyle": "border-[#a7f3d0] bg-[#d1fae5] text-[#065f46]",
+      "preShares": 0,
+      "postShares": 9999996,
+      "badge": "SAFE",
       "isFounder": false,
       "isSafe": true,
       "isInvestor": false,
@@ -356,20 +58,18 @@ const reportData = {
     {
       "name": "Investor 1",
       "preShares": 0,
-      "postShares": 4000000,
-      "badge": null,
-      "badgeStyle": "",
+      "postShares": 4318181,
+      "badge": "Series A",
       "isFounder": false,
       "isSafe": false,
       "isInvestor": true,
       "investment": 2000000
     },
     {
-      "name": "Option pool",
-      "preShares": 2000000,
-      "postShares": 2000000,
-      "badge": null,
-      "badgeStyle": "",
+      "name": "Options Pool (Refreshed)",
+      "preShares": 1000000,
+      "postShares": 2590909,
+      "badge": "ESOP",
       "isFounder": false,
       "isSafe": false,
       "isInvestor": false
@@ -483,22 +183,19 @@ function syncReport() {
   if (safeBody && reportData.rows) {
     const safes = reportData.rows.filter(r => r.isSafe);
     safeBody.innerHTML = safes.map((s, i) => {
-        const rowTop = 261 + (i * 45);
-        const lineTop = rowTop + 28;
-        let html = `<div class="absolute contents font-['Inter:Semi_Bold',sans-serif] font-semibold leading-[0.9] text-[#0d0d0d] text-[15px] tracking-[-0.45px]">`;
-        html += `<div class="absolute left-[30px] top-[${rowTop}px] flex items-center">`;
-        html += `<span>${s.name}</span>`;
-        if (s.badge) {
-            html += `<span class="inline-flex items-center px-1.5 py-0.5 rounded-[7px] border ${s.badgeStyle || ""} text-[10px] font-semibold tracking-[-0.3px] leading-[0.9] ml-2 whitespace-nowrap">${s.badge}</span>`;
-        }
-        html += `</div>`;
-        html += `<p class="-translate-x-full absolute left-[410px] text-right top-[${rowTop}px]">${(s.investment || 0).toLocaleString()}</p>`;
-        html += `<p class="-translate-x-full absolute left-[619px] text-right top-[${rowTop}px]">${(s.cap || 0).toLocaleString()}</p>`;
-        html += `<p class="-translate-x-full absolute left-[788px] text-right top-[${rowTop}px]">${s.discount || "None"}</p>`;
-        html += `<p class="-translate-x-full absolute left-[918px] text-right top-[${rowTop}px]">${s.type || "N/A"}</p>`;
-        html += `<div class="absolute h-0 left-[26px] top-[${lineTop}px] w-[912px]"><div class="absolute inset-[-0.25px_0]"><svg class="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 912 0.5"><path d="M0 0.25H912" stroke="#D2D2D2" stroke-width="0.5"></path></svg></div></div>`;
-        html += `</div>`;
-        return html;
+        return `
+        <div class="flex items-center justify-between py-2 border-b border-[#D2D2D2] font-semibold text-[#0d0d0d] text-[15px] tracking-[-0.45px]">
+          <div class="flex items-center gap-2">
+            <span>${s.name}</span>
+            ${s.badge ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded-[7px] border ${s.badgeStyle || ""} text-[10px] font-semibold leading-[0.9]">${s.badge}</span>` : ""}
+          </div>
+          <div class="flex gap-10">
+            <p class="w-[100px] text-right">${(s.investment || 0).toLocaleString()}</p>
+            <p class="w-[100px] text-right">${(s.cap || 0).toLocaleString()}</p>
+            <p class="w-[100px] text-right">${s.discount || "None"}</p>
+            <p class="w-[100px] text-right">${s.type || "N/A"}</p>
+          </div>
+        </div>`;
     }).join("");
 
     const totalSafeInv = safes.reduce((sum, s) => sum + (s.investment || 0), 0);
@@ -509,17 +206,11 @@ function syncReport() {
   if (investorBody && reportData.rows) {
     const investors = reportData.rows.filter(r => r.isInvestor);
     investorBody.innerHTML = investors.map((inv, i) => {
-        const col = i % 2;
-        const row = Math.floor(i / 2);
-        const left = col === 0 ? 970 : 1445;
-        const top = 195 + (row * 60);
-        let html = `<div class="absolute left-[${left}px] top-[${top}px] w-[465px] h-[55px] bg-[#eeebfb] border border-[#4039a8] border-solid flex items-center px-[10px] justify-between">`;
-        html += `<div class="flex items-center">`;
-        html += `<p class="font-semibold text-[#4039a8] text-[15px]">${inv.name}</p>`;
-        html += `</div>`;
-        html += `<p class="font-semibold text-[#4039a8] text-[15px]">${(inv.investment || 0).toLocaleString()}</p>`;
-        html += `</div>`;
-        return html;
+        return `
+        <div class="w-full h-[55px] bg-[#eeebfb] border border-[#4039a8] border-solid flex items-center px-[20px] justify-between">
+          <p class="font-semibold text-[#4039a8] text-[15px]">${inv.name}</p>
+          <p class="font-semibold text-[#4039a8] text-[15px]">$ ${(inv.investment || 0).toLocaleString()}</p>
+        </div>`;
     }).join("");
   }
 

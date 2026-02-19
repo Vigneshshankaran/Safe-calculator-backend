@@ -309,7 +309,7 @@ if (document.readyState === "complete" || document.readyState === "interactive")
     // 2. Launch Puppeteer
     let browser;
     try {
-        console.log('Attempting to launch with @sparticuz/chromium...');
+        console.log('Attempting to launch with @sparticuz/chromium (Production/Vercel)...');
         const executablePath = await chromium.executablePath();
         browser = await puppeteer.launch({
             args: [...chromium.args, '--disable-web-security', '--allow-file-access-from-files'],
@@ -318,48 +318,60 @@ if (document.readyState === "complete" || document.readyState === "interactive")
             headless: chromium.headless,
             ignoreHTTPSErrors: true,
         });
+        console.log('Successfully launched with @sparticuz/chromium.');
     } catch (launchError) {
-        console.warn('Sparticuz launch failed, trying local Chrome channel...');
-        try {
-            browser = await puppeteer.launch({
-                channel: 'chrome',
-                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],
-                defaultViewport: { width: 1920, height: 1080 },
-                headless: true,
-            });
-            console.log('Successfully launched with Chrome channel.');
-        } catch (localError) {
-            console.warn('Chrome channel failed, trying common Windows paths...');
-            const potentialPaths = [
-                'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-                'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-                process.env.CHROME_PATH 
-            ].filter(Boolean);
+        console.warn('Sparticuz launch failed, trying fallback discovery...', launchError.message);
+        
+        const potentialPaths = [
+            // Local Chrome channel (Puppeteer default discovery)
+            'CHROME_CHANNEL',
+            // Linux common paths
+            '/usr/bin/google-chrome',
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
+            '/app/.apt/usr/bin/google-chrome', // Heroku/Render common path
+            // Windows common paths
+            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+            process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
+            // Environment variable
+            process.env.CHROME_PATH 
+        ].filter(Boolean);
 
-            let lastErr;
-            for (const path of potentialPaths) {
-                try {
-                    if (fs.existsSync(path)) {
-                        browser = await puppeteer.launch({
-                            executablePath: path,
-                            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-                            defaultViewport: { width: 1920, height: 1080 },
-                            headless: true,
-                        });
-                        if (browser) {
-                            console.log(`Successfully launched with executablePath: ${path}`);
-                            break;
-                        }
-                    }
-                } catch (e) {
-                    lastErr = e;
+        let lastErr;
+        for (const path of potentialPaths) {
+            try {
+                if (path === 'CHROME_CHANNEL') {
+                    console.log('Trying launch with channel: chrome...');
+                    browser = await puppeteer.launch({
+                        channel: 'chrome',
+                        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],
+                        defaultViewport: { width: 1920, height: 1080 },
+                        headless: true,
+                    });
+                } else if (fs.existsSync(path)) {
+                    console.log(`Trying launch with executablePath: ${path}...`);
+                    browser = await puppeteer.launch({
+                        executablePath: path,
+                        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],
+                        defaultViewport: { width: 1920, height: 1080 },
+                        headless: true,
+                    });
                 }
+                
+                if (browser) {
+                    console.log(`Successfully launched Chromium using: ${path}`);
+                    break;
+                }
+            } catch (e) {
+                console.warn(`Failed to launch at ${path}:`, e.message);
+                lastErr = e;
             }
+        }
 
-            if (!browser) {
-                console.error('All Puppeteer launch attempts failed.');
-                throw lastErr || new Error('Could not find a valid Chrome/Chromium executable.');
-            }
+        if (!browser) {
+            console.error('All Puppeteer launch attempts failed.');
+            throw lastErr || new Error('Could not find a valid Chrome/Chromium executable on this system.');
         }
     }
 
@@ -408,11 +420,18 @@ if (document.readyState === "complete" || document.readyState === "interactive")
     return Buffer.from(mergedPdfBytes).toString('base64');
 }
 
+const { sendPDFReport, saveLead } = require('./mailer');
+
 // PDF Generation Endpoint
 app.post('/generate-pdf', async (req, res) => {
-    const { reportData } = req.body;
+    const { reportData, leadData, to_email } = req.body;
     if (!reportData) {
         return res.status(400).json({ success: false, message: 'Missing report data' });
+    }
+
+    // Log lead if data provided (usually during Download flow)
+    if (leadData && to_email) {
+        saveLead(to_email, leadData);
     }
 
     console.log('Incoming Report Summary:', JSON.stringify(reportData.summary, null, 2));

@@ -1,4 +1,37 @@
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Saves lead info to a local leads.json file.
+ */
+function saveLead(to_email, summaryData) {
+    try {
+        const lead = {
+            timestamp: new Date().toISOString(),
+            firstName: summaryData.firstName,
+            lastName: summaryData.lastName,
+            email: to_email,
+            company: summaryData.companyName,
+            newsletter: summaryData.subscribe
+        };
+        const leadsPath = path.join(__dirname, 'leads.json');
+        let leads = [];
+        if (fs.existsSync(leadsPath)) {
+            const content = fs.readFileSync(leadsPath, 'utf8');
+            try {
+                leads = JSON.parse(content);
+            } catch (e) {
+                leads = [];
+            }
+        }
+        leads.push(lead);
+        fs.writeFileSync(leadsPath, JSON.stringify(leads, null, 2));
+        console.log('Lead saved to leads.json');
+    } catch (err) {
+        console.error('Failed to save lead:', err);
+    }
+}
 
 /**
  * Sends a high-quality PDF report via Gmail SMTP using Nodemailer.
@@ -8,7 +41,10 @@ async function sendPDFReport(to_email, pdfBase64, summaryData) {
         throw new Error('GMAIL_USER or GMAIL_PASS is not defined in the .env file.');
     }
 
-    // Create transporter using Gmail service
+    // Save lead automatically on email (use primary email if multiple provided)
+    const primaryEmail = Array.isArray(to_email) ? to_email[0] : to_email;
+    saveLead(primaryEmail, summaryData);
+
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -76,5 +112,5 @@ async function sendPDFReport(to_email, pdfBase64, summaryData) {
     return info;
 }
 
-module.exports = { sendPDFReport };
+module.exports = { sendPDFReport, saveLead };
 
