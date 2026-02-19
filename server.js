@@ -39,7 +39,28 @@ async function generatePDFFromTemplates(reportData) {
             console.log(`Using custom executablePath: ${launchOptions.executablePath}`);
         }
 
-        browser = await puppeteer.launch(launchOptions);
+        try {
+            browser = await puppeteer.launch(launchOptions);
+        } catch (launchErr) {
+            console.warn('Default Puppeteer launch failed, trying common Linux paths...');
+            const fallbacks = ['/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+            for (const path of fallbacks) {
+                try {
+                    if (fs.existsSync(path)) {
+                        console.log(`Found fallback at ${path}, trying launch...`);
+                        launchOptions.executablePath = path;
+                        browser = await puppeteer.launch(launchOptions);
+                        if (browser) break;
+                    }
+                } catch (e) {
+                    console.warn(`Failed fallback launch at ${path}:`, e.message);
+                }
+            }
+        }
+
+        if (!browser) {
+            throw new Error('All Puppeteer launch attempts failed. Check Nixpacks configuration or CHROME_PATH.');
+        }
         console.log('Successfully launched browser.');
     } catch (launchError) {
         console.error('Final Puppeteer launch failed:', launchError.message);
