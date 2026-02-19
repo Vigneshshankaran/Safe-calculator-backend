@@ -148,10 +148,12 @@ app.post('/send-email', (req, res) => {
                 console.log(`[Background Queue] Generating PDF first for ${to_email}...`);
                 finalPdfBase64 = await generatePDFFromTemplates(reportData);
             }
+            console.log(`[Background Queue] Generating email content for ${to_email}...`);
             const info = await sendPDFReport(to_email, finalPdfBase64, summaryData);
-            console.log(`[Background Queue] Email sent successfully to: ${to_email} | Info: ${info.response}`);
+            console.log(`[Background Queue] Email sent successfully to: ${to_email} | MessageId: ${info.messageId}`);
         } catch (error) {
-            console.error(`[Background Queue] Failed to process email for ${to_email}:`, error);
+            console.error(`[Background Queue] SEVERE ERROR for ${to_email}:`, error.message);
+            console.error(error.stack);
         }
     })();
 });

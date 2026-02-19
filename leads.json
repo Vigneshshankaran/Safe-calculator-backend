@@ -134,5 +134,29 @@
     "email": "vignesh@equitylist.co",
     "company": "Spark Capital",
     "newsletter": true
+  },
+  {
+    "timestamp": "2026-02-19T11:19:50.003Z",
+    "firstName": "Test",
+    "lastName": "User",
+    "email": "vignesh@equitylist.co"
+  },
+  {
+    "timestamp": "2026-02-19T11:22:21.681Z",
+    "firstName": "Server",
+    "lastName": "Test",
+    "email": "vignesh@equitylist.co"
+  },
+  {
+    "timestamp": "2026-02-19T11:23:13.977Z",
+    "firstName": "Server",
+    "lastName": "Test",
+    "email": "vignesh@equitylist.co"
+  },
+  {
+    "timestamp": "2026-02-19T11:24:53.448Z",
+    "firstName": "Server",
+    "lastName": "Test",
+    "email": "vignesh@equitylist.co"
   }
 ]

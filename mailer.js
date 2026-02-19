@@ -7,13 +7,14 @@ const path = require('path');
  */
 function saveLead(to_email, summaryData) {
     try {
+        const data = summaryData || {};
         const lead = {
             timestamp: new Date().toISOString(),
-            firstName: summaryData.firstName,
-            lastName: summaryData.lastName,
+            firstName: data.firstName || "Unknown",
+            lastName: data.lastName || "",
             email: to_email,
-            company: summaryData.companyName,
-            newsletter: summaryData.subscribe
+            company: data.companyName || "",
+            newsletter: data.subscribe || false
         };
         const leadsPath = path.join(__dirname, 'leads.json');
         let leads = [];
@@ -53,8 +54,9 @@ async function sendPDFReport(to_email, pdfBase64, summaryData) {
         }
     });
 
-    const firstName = summaryData.firstName 
-        ? summaryData.firstName.charAt(0).toUpperCase() + summaryData.firstName.slice(1) 
+    const data = summaryData || {};
+    const firstName = data.firstName 
+        ? data.firstName.charAt(0).toUpperCase() + data.firstName.slice(1) 
         : 'there';
 
     const mailOptions = {
