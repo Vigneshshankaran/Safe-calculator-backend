@@ -7,7 +7,7 @@ const path = require('path');
 const puppeteer = require('puppeteer-core');
 const chromium = require('@sparticuz/chromium');
 const { PDFDocument } = require('pdf-lib');
-const { sendPDFReport } = require('./mailer');
+const { sendPDFReport, saveLead } = require('./mailer');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -420,7 +420,7 @@ if (document.readyState === "complete" || document.readyState === "interactive")
     return Buffer.from(mergedPdfBytes).toString('base64');
 }
 
-const { sendPDFReport, saveLead } = require('./mailer');
+
 
 // PDF Generation Endpoint
 app.post('/generate-pdf', async (req, res) => {
