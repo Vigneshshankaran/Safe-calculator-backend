@@ -4,8 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
+const puppeteer = require('puppeteer');
 const { PDFDocument } = require('pdf-lib');
 const { sendPDFReport, saveLead } = require('./mailer');
 
@@ -308,104 +307,25 @@ if (document.readyState === "complete" || document.readyState === "interactive")
 
     // 2. Launch Puppeteer
     let browser;
-    const isLinux = process.platform === 'linux';
-    
-    // Fallback path list
-    const potentialPaths = [
-        process.env.PUPPETEER_EXECUTABLE_PATH, // Highest priority
-        '/usr/bin/google-chrome',
-        '/usr/bin/chromium',
-        '/usr/bin/chromium-browser',
-        '/app/.apt/usr/bin/google-chrome', 
-        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-        process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe'
-    ].filter(Boolean);
+    try {
+        console.log('Launching Puppeteer...');
+        // Standard Puppeteer will use its own downloaded chromium or CHROME_PATH
+        const launchOptions = {
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],
+            defaultViewport: { width: 1920, height: 1080 },
+            headless: true,
+        };
 
-    // Dynamic detection on Linux
-    if (isLinux) {
-        console.log('Linux detected, searching for system Chromium...');
-        const cp = require('child_process');
-        try {
-            const foundPath = cp.execSync('which chromium || which google-chrome-stable || which google-chrome', { encoding: 'utf8' }).trim();
-            if (foundPath && !potentialPaths.includes(foundPath)) {
-                console.log(`Dynamic detection found browser at: ${foundPath}`);
-                potentialPaths.unshift(foundPath);
-            }
-        } catch (e) {
-            console.warn('Dynamic browser detection failed (which command not found or no matches).');
+        // If a specific path is provided via env, use it
+        if (process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH) {
+            launchOptions.executablePath = process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH;
+            console.log(`Using custom executablePath: ${launchOptions.executablePath}`);
         }
 
-        for (const path of potentialPaths) {
-            try {
-                if (fs.existsSync(path)) {
-                    console.log(`Attempting launch with path: ${path}`);
-                    browser = await puppeteer.launch({
-                        executablePath: path,
-                        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],
-                        defaultViewport: { width: 1920, height: 1080 },
-                        headless: true,
-                    });
-                    if (browser) break;
-                }
-            } catch (e) {
-                console.warn(`Failed to launch at ${path}:`, e.message);
-            }
-        }
-    }
-
-    // If still no browser (not Linux or system paths failed), try Sparticuz (Production/Vercel)
-    if (!browser) {
-        try {
-            console.log('Attempting to launch with @sparticuz/chromium (Vercel/Lambda fallback)...');
-            const executablePath = await chromium.executablePath();
-            browser = await puppeteer.launch({
-                args: [...chromium.args, '--disable-web-security', '--allow-file-access-from-files'],
-                defaultViewport: { width: 1920, height: 1080 },
-                executablePath: executablePath,
-                headless: chromium.headless,
-                ignoreHTTPSErrors: true,
-            });
-            console.log('Successfully launched with @sparticuz/chromium.');
-        } catch (launchError) {
-            console.warn('Sparticuz launch failed, trying final discovery...', launchError.message);
-            
-            // Final attempt: Try channel/any remaining paths
-            try {
-                console.log('Trying launch with channel: chrome...');
-                browser = await puppeteer.launch({
-                    channel: 'chrome',
-                    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],
-                    defaultViewport: { width: 1920, height: 1080 },
-                    headless: true,
-                });
-            } catch (e) {
-                console.warn('Chrome channel failed.');
-            }
-
-            // If still nothing, try the paths list one last time (e.g. for Windows if not caught)
-            if (!browser && !isLinux) {
-                for (const path of potentialPaths) {
-                    try {
-                        if (fs.existsSync(path)) {
-                            browser = await puppeteer.launch({
-                                executablePath: path,
-                                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],
-                                defaultViewport: { width: 1920, height: 1080 },
-                                headless: true,
-                            });
-                            if (browser) break;
-                        }
-                    } catch (e) {
-                        console.warn(`Final failure at ${path}:`, e.message);
-                    }
-                }
-            }
-        }
-    }
-
-    if (!browser) {
-        console.error('All Puppeteer launch attempts failed.');
+        browser = await puppeteer.launch(launchOptions);
+        console.log('Successfully launched browser.');
+    } catch (launchError) {
+        console.error('Final Puppeteer launch failed:', launchError.message);
         throw new Error('Could not find or launch a valid Chrome/Chromium executable.');
     }
 
