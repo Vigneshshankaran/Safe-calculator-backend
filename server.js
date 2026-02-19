@@ -329,36 +329,33 @@ if (document.readyState === "complete" || document.readyState === "interactive")
         throw new Error('Could not find or launch a valid Chrome/Chromium executable.');
     }
 
-    const page = await browser.newPage();
-    console.log('New page created.');
-
-    // Debugging: Forward page logs to terminal
-    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-    page.on('pageerror', err => console.error('PAGE ERROR:', err.message));
-
-    // Disable caching to ensure fresh report-config.js is loaded
-    await page.setCacheEnabled(false);
-
-    const pdfs = [];
-
-    const files = ['summary.html', 'ownership.html', 'terms2.html'];
-    for (const file of files) {
-        console.log(`Generating PDF for ${file}...`);
+    const pagePromises = ['summary.html', 'ownership.html', 'terms2.html'].map(async (file) => {
+        const page = await browser.newPage();
+        // Forward page logs to terminal for debugging
+        page.on('console', msg => console.log(`PAGE LOG [${file}]:`, msg.text()));
+        page.on('pageerror', err => console.error(`PAGE ERROR [${file}]:`, err.message));
+        
+        await page.setCacheEnabled(false);
         const absPath = path.resolve(__dirname, 'public', 'js', file);
         const filePath = `file:///${absPath.replace(/\\/g, '/')}`;
-        await page.goto(filePath, { waitUntil: 'networkidle2' });
         
-        // Give Chart.js enough time to render completely
-        await new Promise(r => setTimeout(r, 2000));
+        console.log(`Navigating to ${file}...`);
+        await page.goto(filePath, { waitUntil: 'networkidle0' });
+        
+        // Even with animation:false, a tiny delay ensures standard DOM stability
+        // Reduced from 2000ms to 200ms
+        await new Promise(r => setTimeout(r, 200));
 
-        const pdf = await page.pdf({
+        console.log(`Generating PDF for ${file}...`);
+        return page.pdf({
             printBackground: true,
             width: '1920px',
             height: '1080px',
         });
-        pdfs.push(pdf);
-        console.log(`Successfully generated PDF for ${file}.`);
-    }
+    });
+
+    const pdfs = await Promise.all(pagePromises);
+    console.log('All PDF segments generated in parallel.');
 
     await browser.close();
 
