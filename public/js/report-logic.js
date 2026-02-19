@@ -1,84 +1,21 @@
-const reportData = {
-  "valuation": 10000000,
-  "raised": 2500000,
-  "safeAmount": 500000,
-  "timestamp": "February 19, 2026 at 03:57 PM",
-  "optionPool": "0%",
-  "roundName": "Series A",
-  "summary": {
-    "ownershipPre": "40.00%",
-    "ownershipPost": "33.33%",
-    "dilution": "6.67%",
-    "postMoney": "$12,000,000",
-    "pricePerShare": "$0.50",
-    "totalShares": "23,999,995",
-    "totalRaised": "$2,500,000"
-  },
-  "rows": [
-    {
-      "name": "Founder 1",
-      "preShares": 4000000,
-      "postShares": 4000000,
-      "badge": null,
-      "isFounder": true,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "Founder 2",
-      "preShares": 4000000,
-      "postShares": 4000000,
-      "badge": null,
-      "isFounder": true,
-      "isSafe": false,
-      "isInvestor": false
-    },
-    {
-      "name": "SAFE 1",
-      "preShares": 10000000,
-      "postShares": 9999996,
-      "badge": "Post-money SAFE",
-      "badgeStyle": "border-[#a7f3d0] bg-[#d1fae5] text-[#065f46]",
-      "isFounder": false,
-      "isSafe": true,
-      "isInvestor": false,
-      "investment": 500000,
-      "cap": 1000000,
-      "discount": "20%",
-      "type": "Post-money"
-    },
-    {
-      "name": "Investor 1",
-      "preShares": 0,
-      "postShares": 3999999,
-      "badge": null,
-      "badgeStyle": "",
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": true,
-      "investment": 2000000
-    },
-    {
-      "name": "Option pool",
-      "preShares": 2000000,
-      "postShares": 2000000,
-      "badge": null,
-      "badgeStyle": "",
-      "isFounder": false,
-      "isSafe": false,
-      "isInvestor": false
-    }
-  ]
-};
-
 function syncReport() {
   console.log("Syncing report data...");
+  if (typeof reportData === 'undefined') {
+      console.error("reportData is not defined. Make sure report-config.js is loaded first.");
+      return;
+  }
+
   const timestampEls = document.querySelectorAll(".timestamp-value");
   timestampEls.forEach(el => {
       if (!el.dataset.synced) {
-        el.innerText = reportData.timestamp;
+        el.innerText = reportData.timestamp || "";
         el.dataset.synced = "true";
       }
+  });
+
+  const roundNameEls = document.querySelectorAll(".display-round-name");
+  roundNameEls.forEach(el => {
+      el.innerText = reportData.roundName || "Series A";
   });
 
   setText("outcome-ownership", reportData.summary.ownershipPost);
@@ -90,23 +27,35 @@ function syncReport() {
   setText("bar-pre-pct", reportData.summary.ownershipPre);
   setText("bar-post-pct", reportData.summary.ownershipPost);
 
+  const round = reportData.roundName || "Series A";
+  setText("bar-pre-label", `After SAFE conversion & Before ${round}`);
+  setText("bar-post-label", `After SAFE conversion & ${round}`);
+
   const preLabel = document.getElementById("bar-pre-pct");
   const postLabel = document.getElementById("bar-post-pct");
   
-  const hPre = parseFloat(reportData.summary.ownershipPre.replace('%', ''));
-  const hPost = parseFloat(reportData.summary.ownershipPost.replace('%', ''));
+  if (reportData.summary.ownershipPre && reportData.summary.ownershipPost) {
+    const hPre = parseFloat(reportData.summary.ownershipPre.replace('%', ''));
+    const hPost = parseFloat(reportData.summary.ownershipPost.replace('%', ''));
 
-  // 0% floor is at 805px, 100% ceiling is at 65px (total 740px height)
-  if (preLabel) preLabel.style.top = (805 - (hPre * 7.4)) + "px";
-  if (postLabel) postLabel.style.top = (805 - (hPost * 7.4)) + "px";
+    // 0% floor is at 805px, 100% ceiling is at 65px (total 740px height)
+    if (preLabel) preLabel.style.top = (805 - (hPre * 7.4)) + "px";
+    if (postLabel) postLabel.style.top = (805 - (hPost * 7.4)) + "px";
+  }
 
   const tableBody = document.getElementById("table-body");
   if (tableBody) {
     let totalPre = 0;
     let totalPost = 0;
-    reportData.rows.forEach(r => { totalPre += (r.preShares || 0); totalPost += (r.postShares || 0); });
+    reportData.rows.forEach(r => { 
+        totalPre += (r.preShares || 0); 
+        totalPost += (r.postShares || 0); 
+    });
 
     tableBody.innerHTML = reportData.rows.map(row => {
+      const prePct = totalPre > 0 ? (((row.preShares || 0) / totalPre) * 100).toFixed(2) : "0.00";
+      const postPct = totalPost > 0 ? (((row.postShares || 0) / totalPost) * 100).toFixed(2) : "0.00";
+      
       return `
       <div class="grid grid-cols-[1fr_250px_250px_150px_150px_150px] h-[50px] items-center px-[30px] border-b border-[#D2D2D2]">
         <div class="flex items-center">
@@ -115,9 +64,9 @@ function syncReport() {
         </div>
         <span class="text-[25px] font-semibold text-[#6c6c6c] tracking-[-0.75px] text-right">${(row.preShares || 0).toLocaleString()}</span>
         <span class="text-[25px] font-semibold text-[#0d0d0d] tracking-[-0.75px] text-right">${(row.postShares || 0).toLocaleString()}</span>
-        <span class="text-[25px] font-semibold text-[#6c6c6c] tracking-[-0.75px] text-right">${(( (row.preShares || 0) / (totalPre || 1)) * 100).toFixed(2)}%</span>
-        <span class="text-[25px] font-semibold text-[#0d0d0d] tracking-[-0.75px] text-right">${(( (row.postShares || 0) / (totalPost || 1)) * 100).toFixed(2)}%</span>
-        <span class="text-[25px] font-semibold text-[#6c6c6c] tracking-[-0.75px] text-right">${(row.preShares || 0) > 0 ? reportData.summary.pricePerShare : "—"}</span>
+        <span class="text-[25px] font-semibold text-[#6c6c6c] tracking-[-0.75px] text-right">${prePct}%</span>
+        <span class="text-[25px] font-semibold text-[#0d0d0d] tracking-[-0.75px] text-right">${postPct}%</span>
+        <span class="text-[25px] font-semibold text-[#6c6c6c] tracking-[-0.75px] text-right">${(row.preShares || 0) > 0 ? (reportData.summary.pricePerShare || "—") : "—"}</span>
       </div>
     `;}).join("");
     
@@ -129,14 +78,14 @@ function syncReport() {
   if (interpEl) {
     const founderPost = reportData.rows.filter(r => r.isFounder).reduce((s, r) => s + (r.postShares || 0), 0);
     const totalPost = reportData.rows.reduce((s, r) => s + (r.postShares || 0), 0);
-    const founderPct = ((founderPost / (totalPost || 1)) * 100).toFixed(2);
+    const founderPct = totalPost > 0 ? ((founderPost / totalPost) * 100).toFixed(2) : "0.00";
 
     interpEl.innerHTML = `
-      <p>You are modeling a ${reportData.roundName} round raising ${reportData.summary.totalRaised} at a ${reportData.summary.postMoney} post-money valuation. Founder ownership changes from ${reportData.summary.ownershipPre} to ${founderPct}% post-round.</p>
-      <p class="mt-4">${reportData.rows.filter(r => r.isSafe).length} SAFE(s) totaling ${reportData.safeAmount || 0} will convert.</p>
+      <p>You are modeling a ${reportData.roundName || "Series A"} round raising ${reportData.summary.totalRaised || "$0"} at a ${reportData.summary.postMoney || "$0"} post-money valuation. Founder ownership changes from ${reportData.summary.ownershipPre || "0%"} to ${founderPct}% post-round.</p>
+      <p class="mt-4">${reportData.rows.filter(r => r.isSafe).length} SAFE(s) totaling $${(reportData.safeAmount || 0).toLocaleString()} will convert.</p>
       <div class="mt-4">
-        <p>${founderPct < 50 ? "Founders have dropped below 50% majority ownership." : "Founders maintain majority ownership."}</p>
-        <p>The model includes an option pool top-up to reach the target of ${reportData.optionPool}.</p>
+        <p>${parseFloat(founderPct) < 50 ? "Founders have dropped below 50% majority ownership." : "Founders maintain majority ownership."}</p>
+        <p>The model includes an option pool top-up to reach the target of ${reportData.optionPool || "0%"}.</p>
       </div>
     `;
   }
@@ -161,14 +110,13 @@ function syncReport() {
         html += `</div>`;
         html += `<p class="-translate-x-full absolute left-[410px] text-right top-[${rowTop}px]">${(s.investment || 0).toLocaleString()}</p>`;
         html += `<p class="-translate-x-full absolute left-[619px] text-right top-[${rowTop}px]">${(s.cap || 0).toLocaleString()}</p>`;
-        html += `<p class="-translate-x-full absolute left-[788px] text-right top-[${rowTop}px]">${s.discount}</p>`;
-        html += `<p class="-translate-x-full absolute left-[918px] text-right top-[${rowTop}px]">${s.type}</p>`;
+        html += `<p class="-translate-x-full absolute left-[788px] text-right top-[${rowTop}px]">${s.discount || "None"}</p>`;
+        html += `<p class="-translate-x-full absolute left-[918px] text-right top-[${rowTop}px]">${s.type || "Post-money"}</p>`;
         html += `<div class="absolute h-0 left-[26px] top-[${lineTop}px] w-[912px]"><div class="absolute inset-[-0.25px_0]"><svg class="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 912 0.5"><path d="M0 0.25H912" stroke="#D2D2D2" stroke-width="0.5"></path></svg></div></div>`;
         html += `</div>`;
         return html;
     }).join("");
 
-    // --- Totals Calculation (PDF Only) ---
     const totalSafeInv = safes.reduce((sum, s) => sum + (s.investment || 0), 0);
     setText("safe-total-investment", "$" + totalSafeInv.toLocaleString());
   }
@@ -181,17 +129,16 @@ function syncReport() {
         const row = Math.floor(i / 2);
         const left = col === 0 ? 970 : 1445;
         const top = 195 + (row * 60);
-        let html = `<div class="absolute left-[${left}px] top-[${top}px] w-[465px] h-[55px] bg-[#eeebfb] border border-[#4039a8] border-solid opacity-50 flex items-center px-[10px] justify-between">`;
+        let html = `<div class="absolute left-[${left}px] top-[${top}px] w-[465px] h-[55px] bg-[#eeebfb] border border-[#4039a8] border-solid flex items-center px-[10px] justify-between">`;
         html += `<div class="flex items-center">`;
         html += `<p class="font-semibold text-[#4039a8] text-[15px]">${inv.name}</p>`;
         html += `</div>`;
-        html += `<p class="font-semibold text-[#4039a8] text-[15px]">${(inv.investment || 0).toLocaleString()}</p>`;
+        html += `<p class="font-semibold text-[#4039a8] text-[15px]">$${(inv.investment || 0).toLocaleString()}</p>`;
         html += `</div>`;
         return html;
     }).join("");
   }
 
-  // Render Charts
   renderCharts();
 }
 
@@ -207,10 +154,8 @@ function renderCharts() {
     const rows = reportData.rows;
     const totalPost = rows.reduce((s, r) => s + (r.postShares || 0), 0);
     
-    // 1. Doughnut Chart (Ownership Split)
     const pieCanvas = document.getElementById('pieChartCanvas');
     if (pieCanvas) {
-        // Clear previous instances if any
         const existingChart = Chart.getChart(pieCanvas);
         if (existingChart) existingChart.destroy();
 
@@ -257,9 +202,7 @@ function renderCharts() {
                 maintainAspectRatio: false,
                 cutout: '65%',
                 animation: false,
-                layout: {
-                  padding: 0
-                },
+                layout: { padding: 0 },
                 plugins: {
                     legend: { display: false },
                     tooltip: { enabled: false }
@@ -267,11 +210,10 @@ function renderCharts() {
             }
         });
 
-        // Manual Legend for Summary Page
         const legendContainer = document.getElementById('doughnut-legend');
         if (legendContainer) {
             legendContainer.innerHTML = rows.map((r, i) => {
-                const pct = ((r.postShares / (totalPost || 1)) * 100).toFixed(1);
+                const pct = totalPost > 0 ? ((r.postShares / totalPost) * 100).toFixed(1) : "0.0";
                 if (parseFloat(pct) < 0.1) return ""; 
                 return `
                     <div class="flex items-center gap-2">
@@ -283,61 +225,55 @@ function renderCharts() {
         }
     }
 
-    // 2. Bar Chart (Founder Ownership)
     const barCanvas = document.getElementById('barChartCanvas');
     if (barCanvas) {
         const existingChart = Chart.getChart(barCanvas);
         if (existingChart) existingChart.destroy();
 
-        const prePct = parseFloat(reportData.summary.ownershipPre.replace('%', ''));
-        const postPct = parseFloat(reportData.summary.ownershipPost.replace('%', ''));
+        if (reportData.summary.ownershipPre && reportData.summary.ownershipPost) {
+            const prePct = parseFloat(reportData.summary.ownershipPre.replace('%', ''));
+            const postPct = parseFloat(reportData.summary.ownershipPost.replace('%', ''));
 
-        new Chart(barCanvas.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: ['Pre-round', 'Post-round'],
-                datasets: [{
-                    data: [prePct, postPct],
-                    backgroundColor: ["#E5E5ED", "#5F17EA"],
-                    borderRadius: 8,
-                    barThickness: 60
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false,
-                layout: {
-                    padding: 0
+            new Chart(barCanvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Pre-round', 'Post-round'],
+                    datasets: [{
+                        data: [prePct, postPct],
+                        backgroundColor: ["#E5E5ED", "#5F17EA"],
+                        borderRadius: 8,
+                        barThickness: 60
+                    }]
                 },
-                scales: {
-                    y: {
-                        display: false,
-                        beginAtZero: true,
-                        min: 0,
-                        max: 100,
-                        offset: false,
-                        ticks: {
-                            padding: 0
-                        }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    layout: { padding: 0 },
+                    scales: {
+                        y: {
+                            display: false,
+                            beginAtZero: true,
+                            min: 0,
+                            max: 100,
+                            ticks: { padding: 0 }
+                        },
+                        x: { display: false }
                     },
-                    x: {
-                        display: false
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
                     }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: false }
                 }
-            }
-        });
-        console.log("Bar chart rendered with precision alignment.");
+            });
+            console.log("Bar chart rendered with precision alignment.");
+        }
     }
 }
 
 function setText(id, value) {
   const el = document.getElementById(id);
-  if (el) el.innerText = value;
+  if (el) el.innerText = value || "";
 }
 
 document.addEventListener("DOMContentLoaded", syncReport);

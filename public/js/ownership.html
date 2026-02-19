@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <script src="chart.js"></script>
     <script src="report-config.js" defer></script>
+    <script src="report-logic.js" defer></script>
 
     <style>
       /* Supporting the custom Inter font family you specified */
@@ -32,7 +33,7 @@
       }
     </style>
   <body class="bg-[#e5e5e5] font-['Inter',sans-serif]">
-    <div style="width: 1920px; height: 1080px; position: relative; background: white; margin: 0 auto; overflow: hidden;">
+    <div style="width: 1920px; min-height: 1080px; position: relative; background: white; margin: 0 auto;">
       <div class="bg-white relative size-full">
         <!-- Synchronized Header -->
         <div class="absolute border-[#4039a8] border-b-[3px] border-solid h-[103px] left-[260px] top-0 w-[1660px]"></div>
@@ -74,7 +75,8 @@
                   <h2
                     class="text-[30px] font-semibold text-[#4039a8] tracking-[-0.9px] uppercase mb-[40px] ml-[20px]"
                   >
-                    OWNERSHIP BREAKDOWN
+                 CAP TABLE <span class="display-round-name"></span>
+
                   </h2>
 
                   <div class="w-full">
@@ -87,19 +89,19 @@
                       >
                       <span
                         class="text-[25px] font-semibold text-[#4039a8] tracking-[-0.75px] text-right"
-                        >Shares (Pre)</span
+                        >Shares (Before)</span
                       >
                       <span
                         class="text-[25px] font-semibold text-[#4039a8] tracking-[-0.75px] text-right"
-                        >Shares (Post)</span
+                        >Shares (After)</span
                       >
                       <span
                         class="text-[25px] font-semibold text-[#4039a8] tracking-[-0.75px] text-right"
-                        >% (Pre)</span
+                        >% (Before)</span
                       >
                       <span
                         class="text-[25px] font-semibold text-[#4039a8] tracking-[-0.75px] text-right"
-                        >% (Post)</span
+                        >% (After)</span
                       >
                       <span
                         class="text-[25px] font-semibold text-[#4039a8] tracking-[-0.75px] text-right"
@@ -145,7 +147,7 @@
                 </div>
               </div>
 
-              <div class="px-[10px] mt-2 mb-10">
+              <div class="px-[10px] mt-2 mb-10" style="break-before: page; padding-top: 50px;">
                 <div
                   class="relative border border-[#919191] border-opacity-33 bg-white flex"
                 >
@@ -154,6 +156,7 @@
                   >
                     <div class="text-center mb-2">
                       <h3
+                        id="ownership-round-label"
                         class="text-[22px] font-bold text-[#4039a8] tracking-[-0.66px] uppercase leading-[0.9]"
                       >
                         Round<br />summary  
