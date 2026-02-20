@@ -2,9 +2,8 @@ const { Resend } = require('resend');
 const fs = require('fs');
 const path = require('path');
 
-// Domain from address - can be "onboarding@resend.dev" for testing
-// or a verified domain like "no-reply@equitylist.co"
-const FROM_EMAIL = "onboarding@resend.dev"; 
+// Domain from address - must be verified in Resend dashboard
+const FROM_EMAIL = "no-reply@equitylist.co"; 
 
 /**
  * Persists lead information to a local file.
@@ -27,7 +26,7 @@ function saveLead(email, data = {}) {
             try {
                 leads = JSON.parse(fs.readFileSync(filePath, 'utf8'));
             } catch (e) {
-                console.warn('[Mailer] leads.json was invalid, resetting.');
+                console.warn('[Resend] leads.json was invalid, resetting.');
             }
         }
 
@@ -57,42 +56,56 @@ async function sendPDFReport(to_email, pdfBase64, summaryData) {
     // Persist lead
     saveLead(recipient, summaryData);
 
-    const studentName = summaryData?.firstName 
+    const firstName = summaryData.firstName 
         ? summaryData.firstName.charAt(0).toUpperCase() + summaryData.firstName.slice(1) 
-        : 'User';
+        : 'there';
 
-    // HTML Template
+    // User-provided HTML Template
     const htmlContent = `
-        <div style="font-family: 'Inter', -apple-system, sans-serif; max-width: 600px; line-height: 1.6; color: #1e293b; padding: 20px;">
-            <h2 style="color: #0f172a;">Hi ${studentName},</h2>
-            <p>Thank you for using the EquityList SAFE Calculator. Please find your detailed report attached below.</p>
-            
-            <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin: 24px 0; border: 1px solid #e2e8f0;">
-                <h3 style="margin-top: 0; font-size: 16px; color: #64748b;">Report Summary</h3>
-                <p style="margin: 8px 0;"><strong>Founder Ownership:</strong> ${summaryData?.founderOwnership || 'N/A'}</p>
-                <p style="margin: 8px 0;"><strong>Post-Money Valuation:</strong> ${summaryData?.postMoney || 'N/A'}</p>
-                <p style="margin: 8px 0;"><strong>Total Raised:</strong> ${summaryData?.totalRaised || 'N/A'}</p>
+        <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #1e293b; line-height: 1.6;">
+            <p>Hi ${firstName},</p>
+            <p>Thank you for using EquityList’s SAFE Calculator.</p>
+            <p>Here’s a quick summary of the outcome you modeled:</p>
+            <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin: 24px 0; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Founder ownership post-round</td>
+                        <td style="padding: 8px 0; text-align: right; color: #1e293b; font-weight: 600; font-size: 14px;">${summaryData.founderOwnership || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Total founder dilution</td>
+                        <td style="padding: 8px 0; text-align: right; color: #1e293b; font-weight: 600; font-size: 14px;">${summaryData.founderDilution || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Post-money valuation</td>
+                        <td style="padding: 8px 0; text-align: right; color: #1e293b; font-weight: 600; font-size: 14px;">${summaryData.postMoney || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Total raised (SAFEs + priced round)</td>
+                        <td style="padding: 8px 0; text-align: right; color: #1e293b; font-weight: 600; font-size: 14px;">${summaryData.totalRaised || 'N/A'}</td>
+                    </tr>
+                </table>
             </div>
-
-            <p>If you have any questions or need a detailed equity consultation, we're here to help.</p>
-            <p>Best regards,<br><strong>The EquityList Team</strong></p>
-            
-            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
-            <p style="font-size: 12px; color: #94a3b8; font-style: italic;">
-                Note: This report is based on the data entered in the calculator. Final outcomes may vary based on legal documentation and definitive agreements.
+            <p>We’ve attached the full calculation, including the post-round cap table, SAFE conversion, option pool impact, and investor ownership.</p>
+            <br>
+            <p style="margin-bottom: 4px;">Best,</p>
+            <p style="margin-top: 0;"><strong>Farheen, EquityList</strong><br><a href="https://equitylist.co" style= "text-decoration: none; font-weight: 600;">(Book a demo)</a></p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 40px 0;">
+            <p style="font-size: 12px; color: #94a3b8; line-height: 1.5; font-style: italic;">
+                Note: This is a modeled outcome based on the assumptions you entered. Final results may vary based on documentation and execution.
             </p>
         </div>
     `;
 
     try {
         const result = await resend.emails.send({
-            from: `EquityList <${FROM_EMAIL}>`,
+            from: `EquityList SAFE Calculator <${FROM_EMAIL}>`,
             to: Array.isArray(to_email) ? to_email : [to_email],
-            subject: 'Your SAFE Calculator Equity Results',
+            subject: `Your SAFE calculator results | EquityList`,
             html: htmlContent,
             attachments: [
                 {
-                    filename: `SAFE_Equity_Report_${Date.now()}.pdf`,
+                    filename: `SAFE_Equity_Report_${new Date().toISOString().split('T')[0]}.pdf`,
                     content: Buffer.from(pdfBase64, 'base64'),
                 }
             ]
