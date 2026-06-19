@@ -295,7 +295,7 @@ app.post('/generate-pdf', rateLimit({ windowMs: 60 * 1000, max: 10 }), async (re
 
 const server = app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
-    if (ALLOWED_ORIGINS.length === 0) {
+    if (process.env.NODE_ENV === 'production' && ALLOWED_ORIGINS.length === 0) {
         console.warn('WARNING: ALLOWED_ORIGINS is not set — CORS is open to all origins. Set it in production.');
     }
     console.log(`PDF concurrency limit: ${MAX_CONCURRENT}`);
