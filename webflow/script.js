@@ -1724,6 +1724,11 @@ function openWebflowLeadPopup(onSuccess) {
     }
     _wfBackdrop.style.display = "block";
 
+    // Neutralize any leftover hide-CSS on the form itself (e.g. opacity:0 /
+    // left:-9999px from the embed) so it's fully visible inside the popup.
+    form.style.cssText =
+        "position:static;left:auto;top:auto;opacity:1;visibility:visible;pointer-events:auto;width:100%;";
+
     // Show the form centered as a card — VISIBLE so Turnstile can render/solve.
     wrap.style.cssText =
         "display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);" +
