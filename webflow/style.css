@@ -2312,11 +2312,16 @@
         border: 1px solid #D97707;
       }
 
-      .safe-calculator-widget .sc-tag-post,
-.safe-calculator-widget .sc-tag-mfn {
+      .safe-calculator-widget .sc-tag-post {
         background: #eff6ff;
         color: #2663EB !important;
         border: 1px solid #2663EB;
+      }
+
+      .safe-calculator-widget .sc-tag-mfn {
+        background: #eff6ff !important;
+        color: #7C3AED !important;
+        border: 1px solid #7C3AED !important;
       }
 
       .safe-calculator-widget .sc-tag-pool {

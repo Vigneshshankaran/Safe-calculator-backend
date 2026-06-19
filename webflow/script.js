@@ -1864,8 +1864,7 @@ function openWebflowLeadPopup(onSuccess) {
         "display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);" +
         "z-index:99999;box-sizing:border-box;background:#fff;padding:0;border-radius:16px;border:1px solid #eae7ff;" +
         "max-width:480px;width:calc(100% - 32px);max-height:90vh;overflow:auto;" +
-        "box-shadow:0 20px 48px rgba(13,10,64,0.16);font-family:'Inter',sans-serif;" +
-        "animation:slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);";
+        "box-shadow:0 20px 48px rgba(13,10,64,0.16);font-family:'Inter',sans-serif;";
 
     // Intercept submit on the Webflow form to show a loading state
     if (!form._wfSubmitObserved) {
