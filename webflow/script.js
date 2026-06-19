@@ -1730,6 +1730,65 @@ window.closeWebflowLeadPopup = function () {
     if (_wfBackdrop) _wfBackdrop.style.display = "none";
 };
 
+// Inject (once) a stylesheet that makes the Webflow lead form look identical to
+// the original built-in email modal — same header, uppercase labels, input
+// styling, checkbox card and purple primary button. Everything is scoped under
+// `.sv-wf-modal` so it only affects the popup, never the rest of the page.
+function ensureWfModalStyles() {
+    if (document.getElementById("sv-wf-modal-style")) return;
+    const css = `
+.sv-wf-modal *{box-sizing:border-box;}
+.sv-wf-modal .sv-wf-modal-header{display:flex;justify-content:space-between;align-items:center;padding:24px 28px 18px 28px;border-bottom:1px solid #f3f0ff;}
+.sv-wf-modal .sv-wf-modal-header h3{font-size:18px;font-weight:600;color:#0d0a40;letter-spacing:-0.01em;margin:0;font-family:'Inter',sans-serif;}
+.sv-wf-modal .sv-wf-modal-close{background:none;border:none;font-size:24px;color:#9ca3af;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all .2s ease;line-height:1;padding:0;flex-shrink:0;}
+.sv-wf-modal .sv-wf-modal-close:hover{background:#f3f0ff;color:#0d0a40;}
+.sv-wf-modal > form,.sv-wf-modal > .w-form-done,.sv-wf-modal > .w-form-fail{padding:24px 28px 28px !important;margin:0 !important;}
+.sv-wf-modal form > div{margin-bottom:0;}
+.sv-wf-modal label:not(.w-checkbox):not(.w-form-label){font-size:11px;font-weight:600;color:#444266;letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;display:block;font-family:'Inter',sans-serif;}
+.sv-wf-modal input[type=text],.sv-wf-modal input[type=email],.sv-wf-modal input[type=tel],.sv-wf-modal .w-input,.sv-wf-modal .w-select,.sv-wf-modal select,.sv-wf-modal textarea{display:block !important;width:100% !important;height:44px !important;padding:10px 14px !important;font-size:14px !important;font-family:'Inter',sans-serif !important;font-weight:400 !important;color:#0d0a40 !important;background:#fff !important;border:1px solid #eae7ff !important;border-radius:8px !important;outline:none !important;transition:all .2s ease !important;box-shadow:0 1px 2px rgba(13,10,64,0.04) !important;margin-bottom:16px !important;}
+.sv-wf-modal input::placeholder{color:#a3a1c2 !important;}
+.sv-wf-modal input[type=text]:focus,.sv-wf-modal input[type=email]:focus,.sv-wf-modal .w-input:focus{border-color:#5f46ff !important;box-shadow:0 0 0 3px rgba(95,70,255,.15) !important;}
+.sv-wf-modal .w-checkbox{display:flex !important;align-items:flex-start;gap:10px;background:#fbfbfe;border:1px solid #eae7ff;border-radius:12px;padding:16px;margin-bottom:16px;}
+.sv-wf-modal .w-checkbox label,.sv-wf-modal .w-form-label{text-transform:none !important;font-size:13px !important;font-weight:400 !important;color:#444266 !important;letter-spacing:normal !important;margin:0 !important;line-height:1.4 !important;font-family:'Inter',sans-serif !important;}
+.sv-wf-modal input[type=checkbox]{width:16px !important;height:16px !important;margin-top:2px !important;accent-color:#5f46ff;flex-shrink:0;}
+.sv-wf-modal .w-checkbox-input{margin-top:2px;}
+.sv-wf-modal .sv-wf-note{font-size:11px;color:#9ca3af;margin:8px 0 16px 0;line-height:1.4;font-family:'Inter',sans-serif;}
+.sv-wf-modal .w-button,.sv-wf-modal input[type=submit],.sv-wf-modal button[type=submit]{height:46px !important;font-size:14px !important;font-weight:500 !important;border-radius:10px !important;background:#5f46ff !important;color:#fff !important;border:none !important;width:100% !important;cursor:pointer !important;transition:all .2s ease !important;box-shadow:0 4px 12px rgba(95,70,255,.15) !important;font-family:'Inter',sans-serif !important;margin-top:4px !important;}
+.sv-wf-modal .w-button:hover,.sv-wf-modal input[type=submit]:hover,.sv-wf-modal button[type=submit]:hover{background:#4a34e0 !important;transform:translateY(-1px);box-shadow:0 6px 16px rgba(95,70,255,.25) !important;}
+.w-form-done-spinner{width:28px;height:28px;border:3px solid #eae7ff;border-top-color:#5f46ff;border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}`;
+    const tag = document.createElement("style");
+    tag.id = "sv-wf-modal-style";
+    tag.textContent = css;
+    document.head.appendChild(tag);
+}
+
+// Text shown in the original built-in modal — mirror it onto the Webflow form
+// so the wording matches exactly. Keyed by the field's name/id (lowercased,
+// non-letters stripped). Only rewrites a standalone <label>, never a wrapping
+// checkbox label, so it can't blank anything out.
+const WF_LABEL_TEXT = {
+    "firstname": "First name",
+    "lastname": "Last name",
+    "email": "Work email",
+    "company": "Company name",
+    "companyname": "Company name",
+};
+
+function applyWfModalText(form) {
+    // Header title is injected separately. Here we fix field labels + button.
+    form.querySelectorAll("label").forEach((label) => {
+        if (label.querySelector("input,select,textarea")) return; // checkbox label — leave it
+        let key = (label.getAttribute("for") || "").toLowerCase();
+        if (!key) {
+            const inp = label.parentElement && label.parentElement.querySelector("input,select,textarea");
+            if (inp) key = (inp.getAttribute("name") || inp.id || "").toLowerCase();
+        }
+        key = key.replace(/[^a-z]/g, "");
+        if (WF_LABEL_TEXT[key]) label.textContent = WF_LABEL_TEXT[key];
+    });
+}
+
 // Opens the Webflow form as a centered modal. Returns false if the form isn't
 // on the page (caller then falls back to the built-in modal).
 function openWebflowLeadPopup(onSuccess) {
@@ -1737,6 +1796,8 @@ function openWebflowLeadPopup(onSuccess) {
     if (!form) return false;
     const wrap = form.closest(".w-form") || form;
     _wfOnSuccess = onSuccess;
+
+    ensureWfModalStyles();
 
     if (!_wfBackdrop) {
         _wfBackdrop = document.createElement("div");
@@ -1764,12 +1825,11 @@ function openWebflowLeadPopup(onSuccess) {
         submitBtn.disabled = false;
         submitBtn.style.opacity = "";
         submitBtn.style.pointerEvents = "";
+        // Match the old modal's button label exactly.
         if (submitBtn.tagName === 'INPUT') {
-            if (!submitBtn._originalValue) submitBtn._originalValue = submitBtn.value;
-            submitBtn.value = submitBtn._originalValue;
+            submitBtn.value = "Download the report";
         } else {
-            if (!submitBtn._originalText) submitBtn._originalText = submitBtn.textContent;
-            submitBtn.textContent = submitBtn._originalText;
+            submitBtn.textContent = "Download the report";
         }
     }
 
@@ -1778,16 +1838,32 @@ function openWebflowLeadPopup(onSuccess) {
     form.style.cssText =
         "position:static;left:auto;top:auto;opacity:1;visibility:visible;pointer-events:auto;width:100%;";
 
-    // Dynamically add the widget class so all inputs, fonts, and buttons inside the Webflow form wrapper
-    // inherit our scoped stylesheet themes.
-    wrap.classList.add("safe-calculator-widget");
+    // Tag the wrap so the injected `.sv-wf-modal` stylesheet themes the form to
+    // match the built-in email modal (header, labels, inputs, button).
+    wrap.classList.add("sv-wf-modal");
+
+    // Inject the modal header (title + close ✕) once, matching the old modal.
+    if (!wrap.querySelector(".sv-wf-modal-header")) {
+        const header = document.createElement("div");
+        header.className = "sv-wf-modal-header";
+        header.innerHTML =
+            '<h3>Download the ownership report</h3>' +
+            '<button type="button" class="sv-wf-modal-close" aria-label="Close">&times;</button>';
+        header.querySelector(".sv-wf-modal-close")
+            .addEventListener("click", window.closeWebflowLeadPopup);
+        wrap.insertBefore(header, wrap.firstChild);
+    }
+
+    // Mirror the old modal's field wording onto the Webflow labels + button.
+    applyWfModalText(form);
 
     // Show the form centered as a card — VISIBLE so Turnstile can render/solve.
+    // Padding lives in the stylesheet (header + form), so the card itself has none.
     wrap.style.cssText =
         "display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);" +
-        "z-index:99999;box-sizing:border-box;background:#fff;padding:24px;border-radius:12px;border:1px solid #eae7ff;" +
-        "max-width:440px;width:calc(100% - 32px);max-height:90vh;overflow:auto;" +
-        "box-shadow:0 25px 50px -12px rgba(13,10,64,0.25);font-family:'Inter',sans-serif;" +
+        "z-index:99999;box-sizing:border-box;background:#fff;padding:0;border-radius:16px;border:1px solid #eae7ff;" +
+        "max-width:480px;width:calc(100% - 32px);max-height:90vh;overflow:auto;" +
+        "box-shadow:0 20px 48px rgba(13,10,64,0.16);font-family:'Inter',sans-serif;" +
         "animation:slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);";
 
     // Intercept submit on the Webflow form to show a loading state
