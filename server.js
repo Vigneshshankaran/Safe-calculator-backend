@@ -101,19 +101,34 @@ async function launchBrowser() {
     try {
         return await puppeteer.launch(launchOptions);
     } catch (launchErr) {
-        console.warn('Default Puppeteer launch failed, trying common Linux paths...');
-        const fallbacks = ['/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+        console.warn(`Default Puppeteer launch failed. Error: ${launchErr.message}`);
+        console.warn('Trying fallback paths and command names...');
+        
+        const fallbacks = [
+            process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH,
+            'chromium',
+            'chromium-browser',
+            '/usr/bin/google-chrome-stable',
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
+            'google-chrome-stable',
+            'google-chrome',
+            '/usr/bin/google-chrome'
+        ].filter(Boolean);
+
         for (const p of fallbacks) {
-            if (fs.existsSync(p)) {
-                try {
-                    console.log(`Found fallback at ${p}, trying launch...`);
-                    return await puppeteer.launch({ ...launchOptions, executablePath: p });
-                } catch (e) {
-                    console.warn(`Failed fallback launch at ${p}:`, e.message);
-                }
+            // If it's an absolute path and doesn't exist, skip it to save time
+            if (p.startsWith('/') && !fs.existsSync(p)) {
+                continue;
+            }
+            try {
+                console.log(`Trying fallback launch with executablePath: "${p}"...`);
+                return await puppeteer.launch({ ...launchOptions, executablePath: p });
+            } catch (e) {
+                console.warn(`Failed fallback launch with "${p}":`, e.message);
             }
         }
-        throw new Error('Could not find or launch a valid Chrome/Chromium executable.');
+        throw new Error(`Could not find or launch a valid Chrome/Chromium executable. Default error: ${launchErr.message}`);
     }
 }
 
