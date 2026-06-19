@@ -1700,6 +1700,9 @@ function hideWebflowLeadForm() {
     const form = findWebflowLeadForm();
     if (!form) return;
     const wrap = form.closest(".w-form") || form;
+    // Force the rendered-but-offscreen state with inline styles so any leftover
+    // hide-CSS in the embed (e.g. opacity:0 / display:none) can't re-break
+    // Turnstile. Inline styles beat non-!important stylesheet rules.
     Object.assign(wrap.style, {
         position: "absolute",
         left: "-9999px",
@@ -1707,6 +1710,10 @@ function hideWebflowLeadForm() {
         width: "1px",
         height: "1px",
         overflow: "hidden",
+        opacity: "1",
+        visibility: "visible",
+        display: "block",
+        pointerEvents: "auto",
     });
 }
 if (document.readyState === "loading") {
