@@ -1,30 +1,7 @@
 [phases.setup]
 nixPkgs = [
-    "nodejs",
-    "chromium",
-    "nss",
-    "nspr",
-    "atk",
-    "at-spi2-atk",
-    "libdrm",
-    "expat",
-    "libxcb",
-    "libxshmfence",
-    "glib",
-    "pango",
-    "cairo",
-    "libX11",
-    "libXcomposite",
-    "libXdamage",
-    "libXext",
-    "libXfixes",
-    "libXrandr",
-    "libgbm",
-    "alsa-lib"
+    "nodejs"
 ]
 
-[variables]
-# Puppeteer will download its own chrome, so we don't strictly need the Nix chromium
-# but chromium in nixPkgs helps ensure all libs are installed.
-# We set this to let puppeteer use its own downloaded version if desired.
-PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "false"
+[phases.install]
+cmds = ["npm install"]

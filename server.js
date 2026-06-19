@@ -4,7 +4,8 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 const { PDFDocument } = require('pdf-lib');
 
 const app = express();
@@ -84,52 +85,24 @@ let _browser = null;
 let _launching = null;
 
 async function launchBrowser() {
-    const launchOptions = {
-        // NOTE: web-security and file-access flags are intentionally NOT set.
-        // The templates are local and self-contained, and user-supplied data is
-        // HTML-escaped before injection, so those flags would only add risk.
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    // Use a custom path from env if provided, otherwise use @sparticuz/chromium
+    // which bundles a statically-linked Chromium binary that works in containers.
+    const execPath = process.env.CHROME_PATH
+        || process.env.PUPPETEER_EXECUTABLE_PATH
+        || await chromium.executablePath();
+
+    console.log(`Launching browser with executablePath: ${execPath}`);
+
+    return await puppeteer.launch({
+        args: [
+            ...chromium.args,
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+        ],
         defaultViewport: { width: 1920, height: 1080 },
-        headless: true,
-    };
-
-    if (process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH) {
-        launchOptions.executablePath = process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH;
-        console.log(`Using custom executablePath: ${launchOptions.executablePath}`);
-    }
-
-    try {
-        return await puppeteer.launch(launchOptions);
-    } catch (launchErr) {
-        console.warn(`Default Puppeteer launch failed. Error: ${launchErr.message}`);
-        console.warn('Trying fallback paths and command names...');
-        
-        const fallbacks = [
-            process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH,
-            'chromium',
-            'chromium-browser',
-            '/usr/bin/google-chrome-stable',
-            '/usr/bin/chromium',
-            '/usr/bin/chromium-browser',
-            'google-chrome-stable',
-            'google-chrome',
-            '/usr/bin/google-chrome'
-        ].filter(Boolean);
-
-        for (const p of fallbacks) {
-            // If it's an absolute path and doesn't exist, skip it to save time
-            if (p.startsWith('/') && !fs.existsSync(p)) {
-                continue;
-            }
-            try {
-                console.log(`Trying fallback launch with executablePath: "${p}"...`);
-                return await puppeteer.launch({ ...launchOptions, executablePath: p });
-            } catch (e) {
-                console.warn(`Failed fallback launch with "${p}":`, e.message);
-            }
-        }
-        throw new Error(`Could not find or launch a valid Chrome/Chromium executable. Default error: ${launchErr.message}`);
-    }
+        executablePath: execPath,
+        headless: chromium.headless,
+    });
 }
 
 async function getBrowser() {
