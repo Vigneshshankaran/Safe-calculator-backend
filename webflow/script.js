@@ -1670,40 +1670,55 @@ Email, Toast, and PDF generation logic.
 const BASE_URL = "https://safe-calculator-backend.onrender.com";
 
 // ── Webflow lead capture ──────────────────────────────────────────────────
-// The download modal posts the captured lead to your Webflow form here.
-// FILL THESE IN: set the form's submit endpoint and map the field names to
-// match your Webflow form. Leave WEBFLOW_FORM_ENDPOINT empty ("") to skip the
-// lead post entirely (download still works).
+// The download modal feeds the native Webflow form on the page: we fill its
+// fields and trigger Webflow's own submit so the lead is stored in Webflow
+// (Forms tab + any integrations) and Cloudflare Turnstile is satisfied.
 //
-// For a native Webflow form, the endpoint is typically:
-//   https://webflow.com/api/v1/form/<your-form-id>
-// or a Zapier/Make webhook URL connected to your Webflow form.
-const WEBFLOW_FORM_ENDPOINT = ""; // e.g. "https://hooks.zapier.com/hooks/catch/xxx/yyy"
+// WEBFLOW_FORM_SELECTOR must match the form on your page. WEBFLOW_FIELDS maps
+// to each Webflow field's `name` attribute (case-sensitive). If the form isn't
+// found, the download still proceeds — lead capture just no-ops.
+const WEBFLOW_FORM_SELECTOR = "#wf-form-Safe-calculator-page";
 const WEBFLOW_FIELDS = {
-    firstName: "First-Name",   // <-- rename to match your Webflow field names
-    lastName:  "Last-Name",
-    email:     "Email",
+    firstName: "First-name",
+    lastName:  "Last-name",
+    email:     "email",
     company:   "Company",
-    subscribe: "Subscribe",
+    subscribe: "I-d-like-to-receive-news-and-updates-from-EquityList",
 };
 
-// Posts the captured lead to Webflow. Never blocks or fails the download.
-async function postLeadToWebflow(lead) {
-    if (!WEBFLOW_FORM_ENDPOINT) return; // not configured yet
+// Fills + submits the native Webflow form. Fire-and-forget: never blocks or
+// fails the PDF download.
+function postLeadToWebflow(lead) {
     try {
-        const payload = {};
-        payload[WEBFLOW_FIELDS.firstName] = lead.firstName || "";
-        payload[WEBFLOW_FIELDS.lastName]  = lead.lastName || "";
-        payload[WEBFLOW_FIELDS.email]     = lead.email || "";
-        payload[WEBFLOW_FIELDS.company]   = lead.company || "";
-        payload[WEBFLOW_FIELDS.subscribe] = !!lead.subscribe;
-        await fetch(WEBFLOW_FORM_ENDPOINT, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
+        const form = document.querySelector(WEBFLOW_FORM_SELECTOR)
+                  || document.querySelector('form[data-name="Safe calculator page"]');
+        if (!form) { console.warn("Webflow form not found:", WEBFLOW_FORM_SELECTOR); return; }
+
+        const setField = (name, value) => {
+            const el = form.querySelector('[name="' + name + '"]');
+            if (!el) return;
+            if (el.type === "checkbox") el.checked = !!value;
+            else el.value = value == null ? "" : String(value);
+            // Let Webflow's validation/listeners see the change.
+            el.dispatchEvent(new Event("input",  { bubbles: true }));
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+        };
+
+        setField(WEBFLOW_FIELDS.firstName, lead.firstName);
+        setField(WEBFLOW_FIELDS.lastName,  lead.lastName);
+        setField(WEBFLOW_FIELDS.email,     lead.email);
+        setField(WEBFLOW_FIELDS.company,   lead.company);
+        setField(WEBFLOW_FIELDS.subscribe, lead.subscribe);
+
+        // Click the submit button so Webflow's own handler runs (AJAX submit,
+        // Turnstile token, success/fail states). Webflow's JS calls
+        // preventDefault, so this never navigates the page.
+        const submitBtn = form.querySelector('input[type="submit"], button[type="submit"], .w-button');
+        if (submitBtn) submitBtn.click();
+        else if (typeof form.requestSubmit === "function") form.requestSubmit();
+        else form.submit();
     } catch (e) {
-        console.warn("Webflow lead post failed (download continues):", e);
+        console.warn("Webflow lead submit failed (download continues):", e);
     }
 }
 
