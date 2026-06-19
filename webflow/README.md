@@ -63,12 +63,14 @@ Set these in **Render → your service → Environment** (not in the repo):
 
 ```
 NODE_ENV=production
-ALLOWED_ORIGINS=https://<your-webflow-domain>,https://<your-site>.webflow.io
+ALLOWED_ORIGINS=https://www.equitylist.co,https://equitylist.webflow.io
 ```
 
-- `ALLOWED_ORIGINS` must list every domain the calculator page is published on.
-- **No trailing slash, no path** — must be bare origins, e.g.
-  `https://www.equitylist.co` (NOT `https://www.equitylist.co/`).
+- `ALLOWED_ORIGINS` must list every origin the calculator page is served from.
+- **No trailing slash, no path** — bare origins only, e.g.
+  `https://www.equitylist.co` (NOT `https://www.equitylist.co/safe-calculator`).
+- `equitylist.co` (no-www) 301-redirects to `www`, so only the www origin
+  actually makes requests — no need to list the bare apex.
 - Without this, CORS is wide open (the server logs a warning at boot).
 
 ---
