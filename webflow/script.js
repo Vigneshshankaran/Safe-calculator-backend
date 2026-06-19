@@ -1741,7 +1741,7 @@ function openWebflowLeadPopup(onSuccess) {
     if (!_wfBackdrop) {
         _wfBackdrop = document.createElement("div");
         _wfBackdrop.style.cssText =
-            "position:fixed;inset:0;background:rgba(13,10,64,0.5);z-index:99998;";
+            "position:fixed;inset:0;background:rgba(13,10,64,0.5);z-index:99998;backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;";
         _wfBackdrop.addEventListener("click", window.closeWebflowLeadPopup);
         document.body.appendChild(_wfBackdrop);
     }
@@ -1778,12 +1778,17 @@ function openWebflowLeadPopup(onSuccess) {
     form.style.cssText =
         "position:static;left:auto;top:auto;opacity:1;visibility:visible;pointer-events:auto;width:100%;";
 
+    // Dynamically add the widget class so all inputs, fonts, and buttons inside the Webflow form wrapper
+    // inherit our scoped stylesheet themes.
+    wrap.classList.add("safe-calculator-widget");
+
     // Show the form centered as a card — VISIBLE so Turnstile can render/solve.
     wrap.style.cssText =
         "display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);" +
-        "z-index:99999;box-sizing:border-box;background:#fff;padding:24px;border-radius:12px;" +
+        "z-index:99999;box-sizing:border-box;background:#fff;padding:24px;border-radius:12px;border:1px solid #eae7ff;" +
         "max-width:440px;width:calc(100% - 32px);max-height:90vh;overflow:auto;" +
-        "box-shadow:0 20px 60px rgba(13,10,64,0.25);font-family:'Inter',sans-serif;";
+        "box-shadow:0 25px 50px -12px rgba(13,10,64,0.25);font-family:'Inter',sans-serif;" +
+        "animation:slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);";
 
     // Intercept submit on the Webflow form to show a loading state
     if (!form._wfSubmitObserved) {
@@ -1821,8 +1826,8 @@ function openWebflowLeadPopup(onSuccess) {
                     doneEl.innerHTML = `
                         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px 0; text-align: center;">
                             <div class="w-form-done-spinner"></div>
-                            <div style="font-weight: 500; font-size: 15px; color: #111;">Generating report...</div>
-                            <div style="font-size: 13px; color: #666;">Please wait while we prepare your PDF.</div>
+                            <div style="font-weight: 500; font-size: 15px; color: #0d0a40;">Generating report...</div>
+                            <div style="font-size: 13px; color: #444266;">Please wait while we prepare your PDF.</div>
                         </div>
                     `;
 
