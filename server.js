@@ -85,23 +85,65 @@ let _browser = null;
 let _launching = null;
 
 async function launchBrowser() {
-    // Use a custom path from env if provided, otherwise use @sparticuz/chromium
-    // which bundles a statically-linked Chromium binary that works in containers.
-    const execPath = process.env.CHROME_PATH
-        || process.env.PUPPETEER_EXECUTABLE_PATH
-        || await chromium.executablePath();
+    // Determine the executable path, checking environment variables, local system fallbacks for dev,
+    // and finally @sparticuz/chromium for serverless/container environments.
+    let execPath = process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH;
+    
+    if (!execPath) {
+        if (process.platform === 'win32') {
+            const winPaths = [
+                'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+                'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+                'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+            ];
+            for (const p of winPaths) {
+                if (fs.existsSync(p)) {
+                    execPath = p;
+                    break;
+                }
+            }
+        } else if (process.platform === 'darwin') {
+            const macPaths = [
+                '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+            ];
+            for (const p of macPaths) {
+                if (fs.existsSync(p)) {
+                    execPath = p;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!execPath) {
+        execPath = await chromium.executablePath();
+    }
 
     console.log(`Launching browser with executablePath: ${execPath}`);
 
+    // If using a local system browser, use standard launching parameters,
+    // otherwise use @sparticuz/chromium parameters.
+    const isLocalSystemBrowser = execPath && (
+        execPath.includes('Google') || 
+        execPath.includes('Microsoft') || 
+        execPath.includes('Edge') || 
+        execPath.includes('Chrome') || 
+        execPath.includes('chrome.exe') || 
+        execPath.includes('msedge.exe')
+    );
+    
+    const launchArgs = isLocalSystemBrowser 
+        ? ['--no-sandbox', '--disable-setuid-sandbox']
+        : [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'];
+
+    const headlessMode = isLocalSystemBrowser ? true : chromium.headless;
+
     return await puppeteer.launch({
-        args: [
-            ...chromium.args,
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-        ],
+        args: launchArgs,
         defaultViewport: { width: 1920, height: 1080 },
         executablePath: execPath,
-        headless: chromium.headless,
+        headless: headlessMode,
     });
 }
 
