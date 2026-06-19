@@ -1748,7 +1748,7 @@ function ensureWfModalStyles() {
 .sv-wf-modal input[type=text],.sv-wf-modal input[type=email],.sv-wf-modal input[type=tel],.sv-wf-modal .w-input,.sv-wf-modal .w-select,.sv-wf-modal select,.sv-wf-modal textarea{display:block !important;width:100% !important;height:44px !important;padding:10px 14px !important;font-size:14px !important;font-family:'Inter',sans-serif !important;font-weight:400 !important;color:#0d0a40 !important;background:#fff !important;border:1px solid #eae7ff !important;border-radius:8px !important;outline:none !important;transition:all .2s ease !important;box-shadow:0 1px 2px rgba(13,10,64,0.04) !important;margin-bottom:16px !important;}
 .sv-wf-modal input::placeholder{color:#a3a1c2 !important;}
 .sv-wf-modal input[type=text]:focus,.sv-wf-modal input[type=email]:focus,.sv-wf-modal .w-input:focus{border-color:#5f46ff !important;box-shadow:0 0 0 3px rgba(95,70,255,.15) !important;}
-.sv-wf-modal .w-checkbox{display:flex !important;align-items:flex-start;gap:10px;background:#fbfbfe;border:1px solid #eae7ff;border-radius:12px;padding:16px;margin-bottom:16px;}
+.sv-wf-modal .w-checkbox{display:flex !important;align-items:flex-start;gap:10px;background:transparent !important;border:none !important;border-radius:0 !important;padding:0 !important;margin-bottom:16px;}
 .sv-wf-modal .w-checkbox label,.sv-wf-modal .w-form-label{text-transform:none !important;font-size:13px !important;font-weight:400 !important;color:#444266 !important;letter-spacing:normal !important;margin:0 !important;line-height:1.4 !important;font-family:'Inter',sans-serif !important;}
 .sv-wf-modal input[type=checkbox]{width:16px !important;height:16px !important;margin-top:2px !important;accent-color:#5f46ff;flex-shrink:0;}
 .sv-wf-modal .w-checkbox-input{margin-top:2px;}
@@ -1768,6 +1768,7 @@ function ensureWfModalStyles() {
 // non-letters stripped). Only rewrites a standalone <label>, never a wrapping
 // checkbox label, so it can't blank anything out.
 const WF_LABEL_TEXT = {
+    "name": "Name",
     "firstname": "First name",
     "lastname": "Last name",
     "email": "Work email",
