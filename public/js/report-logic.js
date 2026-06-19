@@ -1,5 +1,29 @@
+// HTML-escape any value before it is interpolated into innerHTML. The report
+// data originates from user input (shareholder names, round name, etc.), so this
+// prevents HTML/script injection into the rendered (and PDF'd) page.
+function esc(value) {
+  return String(value == null ? "" : value).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+// Grow any fixed-size "slide" marked with [data-grow-slide] so its white
+// background extends to cover dynamically rendered content (e.g. the chart
+// legend) that overflows the original 1080px height. The page's scrollHeight
+// already reflects the true content extent; we just size the slide to match so
+// the background isn't left short (which would show the gray page behind it).
+function fitPageHeight() {
+  if (typeof document === "undefined") return;
+  const slides = document.querySelectorAll("[data-grow-slide]");
+  if (!slides.length) return;
+  const needed = Math.max(1080, Math.ceil(document.documentElement.scrollHeight));
+  slides.forEach((slide) => { slide.style.height = needed + "px"; });
+}
+
 function syncReport() {
   console.log("Syncing report data...");
+  // Render-complete flag the PDF generator waits on (set true at end of render).
+  if (typeof window !== "undefined") window.__renderDone = false;
   if (typeof reportData === 'undefined') {
       console.error("reportData is not defined. Make sure report-config.js is loaded first.");
       return;
@@ -7,10 +31,7 @@ function syncReport() {
 
   const timestampEls = document.querySelectorAll(".timestamp-value");
   timestampEls.forEach(el => {
-      if (!el.dataset.synced) {
-        el.innerText = reportData.timestamp || "";
-        el.dataset.synced = "true";
-      }
+      el.innerText = reportData.timestamp || "";
   });
 
   const roundNameEls = document.querySelectorAll(".display-round-name");
@@ -53,39 +74,56 @@ function syncReport() {
     });
 
     tableBody.innerHTML = reportData.rows.map(row => {
-      const prePct = totalPre > 0 ? (((row.preShares || 0) / totalPre) * 100).toFixed(2) : "0.00";
-      const postPct = totalPost > 0 ? (((row.postShares || 0) / totalPost) * 100).toFixed(2) : "0.00";
+      const preSharesVal = row.preShares || 0;
+      const postSharesVal = row.postShares || 0;
+      // Match the frontend's safeFormatPercent: show "\u2014" when the share is zero
+      // OR when the percentage rounds to 0.00% (negligible holdings).
+      const fmtPct = (part, total) => {
+        if (!(total > 0) || !(part > 0)) return "\u2014";
+        const s = ((part / total) * 100).toFixed(2);
+        return parseFloat(s) === 0 ? "\u2014" : s + "%";
+      };
+      const prePct = fmtPct(preSharesVal, totalPre);
+      const postPct = fmtPct(postSharesVal, totalPost);
+      const preSharesDisplay = preSharesVal > 0 ? preSharesVal.toLocaleString() : "\u2014";
+      const postSharesDisplay = postSharesVal > 0 ? postSharesVal.toLocaleString() : "\u2014";
       
       return `
       <div class="grid grid-cols-[1fr_250px_250px_150px_150px_150px] h-[50px] items-center px-[30px] border-b border-[#D2D2D2]">
         <div class="flex items-center">
-          <span class="text-[25px] font-semibold text-[#0d0d0d] tracking-[-0.75px] truncate">${row.name}</span>
-          ${(row.badge && !row.isInvestor) ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded-[7px] border ${row.badgeStyle || ""} text-[15px] font-semibold tracking-[-0.45px] leading-[0.9] ml-2 whitespace-nowrap">${row.badge}</span>` : ""}
+          <span class="text-[25px] font-semibold text-[#0d0d0d] tracking-[-0.75px] truncate">${esc(row.name)}</span>
+          ${(row.badge && !row.isInvestor) ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded-[7px] border ${esc(row.badgeStyle || "")} text-[15px] font-semibold tracking-[-0.45px] leading-[0.9] ml-2 whitespace-nowrap">${esc(row.badge)}</span>` : ""}
         </div>
-        <span class="text-[25px] font-semibold text-[#6c6c6c] tracking-[-0.75px] text-right">${(row.preShares || 0).toLocaleString()}</span>
-        <span class="text-[25px] font-semibold text-[#0d0d0d] tracking-[-0.75px] text-right">${(row.postShares || 0).toLocaleString()}</span>
-        <span class="text-[25px] font-semibold text-[#6c6c6c] tracking-[-0.75px] text-right">${prePct}%</span>
-        <span class="text-[25px] font-semibold text-[#0d0d0d] tracking-[-0.75px] text-right">${postPct}%</span>
-        <span class="text-[25px] font-semibold text-[#6c6c6c] tracking-[-0.75px] text-right">${(row.preShares || 0) > 0 ? (reportData.summary.pricePerShare || "—") : "—"}</span>
+        <span class="text-[25px] font-semibold text-[#6c6c6c] tracking-[-0.75px] text-right">${preSharesDisplay}</span>
+        <span class="text-[25px] font-semibold text-[#0d0d0d] tracking-[-0.75px] text-right">${postSharesDisplay}</span>
+        <span class="text-[25px] font-semibold text-[#6c6c6c] tracking-[-0.75px] text-right">${prePct}</span>
+        <span class="text-[25px] font-semibold text-[#0d0d0d] tracking-[-0.75px] text-right">${postPct}</span>
+        <span class="text-[25px] font-semibold text-[#6c6c6c] tracking-[-0.75px] text-right">${esc(row.pps || "\u2014")}</span>
       </div>
     `;}).join("");
     
     setText("total-pre", totalPre.toLocaleString());
     setText("total-post", totalPost.toLocaleString());
+
+    // Total ownership always sums to 100% (every shareholder is counted), but
+    // derive it from the data rather than hardcoding so an empty/zero cap table
+    // shows "—" instead of a misleading 100.00%.
+    setText("total-pre-pct", totalPre > 0 ? "100.00%" : "—");
+    setText("total-post-pct", totalPost > 0 ? "100.00%" : "—");
   }
 
   const interpEl = document.getElementById("interpretation-content");
   if (interpEl) {
     const founderPost = reportData.rows.filter(r => r.isFounder).reduce((s, r) => s + (r.postShares || 0), 0);
     const totalPost = reportData.rows.reduce((s, r) => s + (r.postShares || 0), 0);
-    const founderPct = totalPost > 0 ? ((founderPost / totalPost) * 100).toFixed(2) : "0.00";
+    const founderPct = (totalPost > 0 && founderPost > 0) ? ((founderPost / totalPost) * 100).toFixed(2) : "\u2014";
 
     interpEl.innerHTML = `
-      <p>You are modeling a ${reportData.roundName || "Series A"} round raising ${reportData.summary.totalRaised || "$0"} at a ${reportData.summary.postMoney || "$0"} post-money valuation. Founder ownership changes from ${reportData.summary.ownershipPre || "0%"} to ${founderPct}% post-round.</p>
+      <p>You are modeling a ${esc(reportData.roundName || "Series A")} round raising ${esc(reportData.summary.totalRaised || "$0")} at a ${esc(reportData.summary.postMoney || "$0")} post-money valuation. Founder ownership changes from ${esc(reportData.summary.ownershipPre || "0%")} to ${founderPct}% post-round.</p>
       <p class="mt-4">${reportData.rows.filter(r => r.isSafe).length} SAFE(s) totaling $${(reportData.safeAmount || 0).toLocaleString()} will convert.</p>
       <div class="mt-4">
         <p>${parseFloat(founderPct) < 50 ? "Founders have dropped below 50% majority ownership." : "Founders maintain majority ownership."}</p>
-        <p>The model includes an option pool top-up to reach the target of ${reportData.optionPool || "0%"}.</p>
+        <p>The model includes an option pool top-up to reach the target of ${esc(reportData.optionPool || "0%")}.</p>
       </div>
     `;
   }
@@ -98,24 +136,36 @@ function syncReport() {
   const safeBody = document.getElementById("safe-breakdown-body");
   if (safeBody) {
     const safes = reportData.rows.filter(r => r.isSafe);
-    safeBody.innerHTML = safes.map((s, i) => {
+    // terms2 is a fixed one-page summary (it has a CTA + footer + disclaimer
+    // anchored at the bottom). Show as many SAFEs as fit above the totals row;
+    // any extras are summarized with a pointer to the full cap table, which
+    // lists every SAFE in full and grows to any size.
+    const SAFE_MAX = 10;
+    const safesShown = safes.length > SAFE_MAX ? safes.slice(0, SAFE_MAX - 1) : safes;
+    let safeHtml = safesShown.map((s, i) => {
         const rowTop = 261 + (i * 45);
         const lineTop = rowTop + 28;
         let html = `<div class="absolute contents font-['Inter:Semi_Bold',sans-serif] font-semibold leading-[0.9] text-[#0d0d0d] text-[15px] tracking-[-0.45px]">`;
         html += `<div class="absolute left-[30px] top-[${rowTop}px] flex items-center">`;
-        html += `<span>${s.name}</span>`;
+        html += `<span>${esc(s.name)}</span>`;
         if (s.badge) {
-            html += `<span class="inline-flex items-center px-1.5 py-0.5 rounded-[7px] border ${s.badgeStyle || ""} text-[10px] font-semibold tracking-[-0.3px] leading-[0.9] ml-2 whitespace-nowrap">${s.badge}</span>`;
+            html += `<span class="inline-flex items-center px-1.5 py-0.5 rounded-[7px] border ${esc(s.badgeStyle || "")} text-[10px] font-semibold tracking-[-0.3px] leading-[0.9] ml-2 whitespace-nowrap">${esc(s.badge)}</span>`;
         }
         html += `</div>`;
-        html += `<p class="-translate-x-full absolute left-[410px] text-right top-[${rowTop}px]">${(s.investment || 0).toLocaleString()}</p>`;
-        html += `<p class="-translate-x-full absolute left-[619px] text-right top-[${rowTop}px]">${(s.cap || 0).toLocaleString()}</p>`;
-        html += `<p class="-translate-x-full absolute left-[788px] text-right top-[${rowTop}px]">${s.discount || "None"}</p>`;
-        html += `<p class="-translate-x-full absolute left-[918px] text-right top-[${rowTop}px]">${s.type || "Post-money"}</p>`;
+        html += `<p class="-translate-x-full absolute left-[410px] text-right top-[${rowTop}px]">$${(s.investment || 0).toLocaleString()}</p>`;
+        html += `<p class="-translate-x-full absolute left-[619px] text-right top-[${rowTop}px]">$${(s.cap || 0).toLocaleString()}</p>`;
+        html += `<p class="-translate-x-full absolute left-[788px] text-right top-[${rowTop}px]">${esc(s.discount || "None")}</p>`;
+        html += `<p class="-translate-x-full absolute left-[918px] text-right top-[${rowTop}px]">${esc(s.type || "Post-money")}</p>`;
         html += `<div class="absolute h-0 left-[26px] top-[${lineTop}px] w-[912px]"><div class="absolute inset-[-0.25px_0]"><svg class="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 912 0.5"><path d="M0 0.25H912" stroke="#D2D2D2" stroke-width="0.5"></path></svg></div></div>`;
         html += `</div>`;
         return html;
     }).join("");
+
+    if (safes.length > SAFE_MAX) {
+        const moreTop = 261 + safesShown.length * 45;
+        safeHtml += `<p class="absolute left-[30px] text-[#6c6c6c] text-[14px] italic tracking-[-0.45px]" style="top:${moreTop}px">+ ${safes.length - safesShown.length} more SAFE(s) — see the full cap table</p>`;
+    }
+    safeBody.innerHTML = safeHtml;
 
     const totalSafeInv = safes.reduce((sum, s) => sum + (s.investment || 0), 0);
     setText("safe-total-investment", "$" + totalSafeInv.toLocaleString());
@@ -124,19 +174,27 @@ function syncReport() {
   const investorBody = document.getElementById("round-investors-body");
   if (investorBody) {
     const investors = reportData.rows.filter(r => r.isInvestor);
-    investorBody.innerHTML = investors.map((inv, i) => {
+    // Same one-page-summary constraint as the SAFE list (two-column grid).
+    const INV_MAX = 18;
+    const invShown = investors.length > INV_MAX ? investors.slice(0, INV_MAX - 2) : investors;
+    let invHtml = invShown.map((inv, i) => {
         const col = i % 2;
         const row = Math.floor(i / 2);
         const left = col === 0 ? 970 : 1445;
         const top = 195 + (row * 60);
         let html = `<div class="absolute left-[${left}px] top-[${top}px] w-[465px] h-[55px] bg-[#eeebfb] border border-[#4039a8] border-solid flex items-center px-[10px] justify-between">`;
         html += `<div class="flex items-center">`;
-        html += `<p class="font-semibold text-[#4039a8] text-[15px]">${inv.name}</p>`;
+        html += `<p class="font-semibold text-[#4039a8] text-[15px]">${esc(inv.name)}</p>`;
         html += `</div>`;
         html += `<p class="font-semibold text-[#4039a8] text-[15px]">$${(inv.investment || 0).toLocaleString()}</p>`;
         html += `</div>`;
         return html;
     }).join("");
+    if (investors.length > INV_MAX) {
+        const moreTop = 195 + Math.ceil(invShown.length / 2) * 60;
+        invHtml += `<p class="absolute left-[985px] text-[#6c6c6c] text-[14px] italic" style="top:${moreTop}px">+ ${investors.length - invShown.length} more investor(s) — see the full cap table</p>`;
+    }
+    investorBody.innerHTML = invHtml;
   }
 
   renderCharts();
@@ -218,7 +276,7 @@ function renderCharts() {
                 return `
                     <div class="flex items-center gap-2">
                         <div class="size-[12px] rounded-sm shrink-0" style="background-color: ${backgroundColors[i]}"></div>
-                        <span class="text-[13px] font-bold text-[#494949] truncate">${r.name} (${pct}%)</span>
+                        <span class="text-[13px] font-bold text-[#494949] truncate">${esc(r.name)} (${pct}%)</span>
                     </div>
                 `;
             }).join("");
@@ -269,6 +327,10 @@ function renderCharts() {
             console.log("Bar chart rendered with precision alignment.");
         }
     }
+
+    // Grow any marked slide to fit its content, then signal completion.
+    fitPageHeight();
+    if (typeof window !== "undefined") window.__renderDone = true;
 }
 
 function setText(id, value) {

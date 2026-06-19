@@ -6,179 +6,292 @@ const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const { PDFDocument } = require('pdf-lib');
-const { sendPDFReport, saveLead } = require('./mailer');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json({ limit: '50mb' }));
+// Behind a platform proxy (Railway/Nginx) so req.ip reflects the real client.
+app.set('trust proxy', 1);
+
+// ---------------------------------------------------------------------------
+// Security middleware
+// ---------------------------------------------------------------------------
+
+// CORS allowlist. Set ALLOWED_ORIGINS="https://app.example.com,https://example.com"
+// in the environment for production. If unset, all origins are allowed (dev only).
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+app.use(cors({
+    origin(origin, cb) {
+        // Allow same-origin / server-to-server (no Origin header) and dev (empty allowlist).
+        if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
+            return cb(null, true);
+        }
+        return cb(new Error('Origin not allowed by CORS'));
+    },
+}));
+
+// Minimal hardening headers (dependency-free).
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    next();
+});
+
+// reportData is small JSON; cap the body to prevent abuse.
+app.use(bodyParser.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Simple request logger
+// Request logger.
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
     next();
 });
 
-// Helper to generate PDF from templates
-async function generatePDFFromTemplates(reportData) {
-    // Launch Puppeteer
-    let browser;
-    try {
-        console.log('Launching Puppeteer...');
-        const launchOptions = {
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security', '--allow-file-access-from-files'],
-            defaultViewport: { width: 1920, height: 1080 },
-            headless: true,
-        };
-
-        if (process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH) {
-            launchOptions.executablePath = process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH;
-            console.log(`Using custom executablePath: ${launchOptions.executablePath}`);
+// Simple in-memory, per-IP rate limiter (no external dependency).
+function rateLimit({ windowMs, max }) {
+    const hits = new Map();
+    return (req, res, next) => {
+        const now = Date.now();
+        // Opportunistic cleanup so the map can't grow unbounded.
+        if (hits.size > 5000) {
+            for (const [k, v] of hits) if (now > v.reset) hits.delete(k);
         }
+        const ip = req.ip || 'unknown';
+        let rec = hits.get(ip);
+        if (!rec || now > rec.reset) {
+            rec = { count: 0, reset: now + windowMs };
+            hits.set(ip, rec);
+        }
+        rec.count++;
+        if (rec.count > max) {
+            const retryAfter = Math.ceil((rec.reset - now) / 1000);
+            res.setHeader('Retry-After', String(retryAfter));
+            return res.status(429).json({ success: false, message: 'Too many requests, please try again later.' });
+        }
+        next();
+    };
+}
 
-        try {
-            browser = await puppeteer.launch(launchOptions);
-        } catch (launchErr) {
-            console.warn('Default Puppeteer launch failed, trying common Linux paths...');
-            const fallbacks = ['/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
-            for (const path of fallbacks) {
+// ---------------------------------------------------------------------------
+// Puppeteer — single shared browser instance, reused across requests.
+// ---------------------------------------------------------------------------
+let _browser = null;
+let _launching = null;
+
+async function launchBrowser() {
+    const launchOptions = {
+        // NOTE: web-security and file-access flags are intentionally NOT set.
+        // The templates are local and self-contained, and user-supplied data is
+        // HTML-escaped before injection, so those flags would only add risk.
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        defaultViewport: { width: 1920, height: 1080 },
+        headless: true,
+    };
+
+    if (process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH) {
+        launchOptions.executablePath = process.env.CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH;
+        console.log(`Using custom executablePath: ${launchOptions.executablePath}`);
+    }
+
+    try {
+        return await puppeteer.launch(launchOptions);
+    } catch (launchErr) {
+        console.warn('Default Puppeteer launch failed, trying common Linux paths...');
+        const fallbacks = ['/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+        for (const p of fallbacks) {
+            if (fs.existsSync(p)) {
                 try {
-                    if (fs.existsSync(path)) {
-                        console.log(`Found fallback at ${path}, trying launch...`);
-                        launchOptions.executablePath = path;
-                        browser = await puppeteer.launch(launchOptions);
-                        if (browser) break;
-                    }
+                    console.log(`Found fallback at ${p}, trying launch...`);
+                    return await puppeteer.launch({ ...launchOptions, executablePath: p });
                 } catch (e) {
-                    console.warn(`Failed fallback launch at ${path}:`, e.message);
+                    console.warn(`Failed fallback launch at ${p}:`, e.message);
                 }
             }
         }
-
-        if (!browser) {
-            throw new Error('All Puppeteer launch attempts failed. Check Nixpacks configuration or CHROME_PATH.');
-        }
-        console.log('Successfully launched browser.');
-    } catch (launchError) {
-        console.error('Final Puppeteer launch failed:', launchError.message);
         throw new Error('Could not find or launch a valid Chrome/Chromium executable.');
     }
-
-    const page = await browser.newPage();
-    console.log('New page created.');
-
-    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-    page.on('pageerror', err => console.error('PAGE ERROR:', err.message));
-
-    await page.setCacheEnabled(false);
-
-    const pdfs = [];
-    const files = ['summary.html', 'ownership.html', 'terms2.html'];
-    
-    for (const file of files) {
-        console.log(`Generating PDF for ${file}...`);
-        const absPath = path.resolve(__dirname, 'public', 'js', file);
-        const filePath = `file:///${absPath.replace(/\\/g, '/')}`;
-        
-        await page.goto(filePath, { waitUntil: 'load' });
-        
-        // Inject data and trigger sync
-        await page.evaluate((data) => {
-            window.reportData = data;
-            if (typeof syncReport === 'function') {
-                syncReport();
-            } else {
-                console.warn('syncReport not found on page');
-            }
-        }, reportData);
-
-        // Give extra time for charts
-        await new Promise(r => setTimeout(r, 2000));
-
-        const pdf = await page.pdf({
-            printBackground: true,
-            width: '1920px',
-            height: '1080px',
-        });
-        pdfs.push(pdf);
-        console.log(`Successfully generated PDF for ${file}.`);
-    }
-
-    await browser.close();
-
-    const mergedPdf = await PDFDocument.create();
-    for (const pdfBytes of pdfs) {
-        const pdf = await PDFDocument.load(pdfBytes);
-        const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-        copiedPages.forEach((page) => mergedPdf.addPage(page));
-    }
-
-    const mergedPdfBytes = await mergedPdf.save();
-    return Buffer.from(mergedPdfBytes).toString('base64');
 }
 
+async function getBrowser() {
+    if (_browser && _browser.isConnected()) return _browser;
+    if (!_launching) {
+        _launching = launchBrowser()
+            .then((b) => {
+                _browser = b;
+                _browser.on('disconnected', () => { _browser = null; });
+                return b;
+            })
+            .finally(() => { _launching = null; });
+    }
+    return _launching;
+}
 
+async function generatePDFFromTemplates(reportData) {
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+    page.on('pageerror', (err) => console.error('PAGE ERROR:', err.message));
+    await page.setCacheEnabled(false);
+    // Bound every page operation so a misbehaving render can't hold a slot forever.
+    page.setDefaultNavigationTimeout(20000);
+    page.setDefaultTimeout(20000);
 
-// PDF Generation Endpoint
-app.post('/generate-pdf', async (req, res) => {
-    const { reportData, leadData, to_email } = req.body;
+    try {
+        const pdfs = [];
+        const files = ['summary.html', 'ownership.html', 'terms2.html'];
+
+        for (const file of files) {
+            const absPath = path.resolve(__dirname, 'public', 'js', file);
+            const filePath = `file:///${absPath.replace(/\\/g, '/')}`;
+            await page.goto(filePath, { waitUntil: 'load' });
+
+            // report-config.js declares `const reportData = {...defaults...}` as a
+            // top-level lexical binding (not window.reportData). syncReport() reads
+            // that binding, so we mutate it in place, then re-render.
+            await page.evaluate((data) => {
+                try {
+                    if (typeof reportData === 'object' && reportData) {
+                        Object.keys(reportData).forEach((k) => { delete reportData[k]; });
+                        Object.assign(reportData, data);
+                    }
+                } catch (e) {
+                    console.warn('Could not patch reportData binding:', e.message);
+                }
+                window.reportData = data;
+                if (typeof syncReport === 'function') syncReport();
+                else console.warn('syncReport not found on page');
+            }, reportData);
+
+            // Wait for an explicit render-complete signal instead of a fixed sleep.
+            await page.waitForFunction('window.__renderDone === true', { timeout: 5000 }).catch(() => {
+                console.warn(`Render signal not received for ${file}; proceeding.`);
+            });
+            // Ensure web fonts are ready, then a short settle for canvas paint.
+            try { await page.evaluate(() => (document.fonts ? document.fonts.ready : null)); } catch (e) { /* noop */ }
+            await new Promise((r) => setTimeout(r, 250));
+
+            // Grow any marked "slide" to fit its content — done here, AFTER fonts
+            // are ready, so the measured layout is final (pre-font measurement
+            // would under-size the page and clip reflowed text).
+            await page.evaluate(() => { if (typeof fitPageHeight === 'function') fitPageHeight(); }).catch(() => {});
+
+            // Pages are 1920x1080 "slides", but the cap-table page grows with the
+            // number of shareholders. Render at the content's natural height so
+            // nothing is clipped; pages that fit stay at the standard 1080.
+            const contentHeight = await page.evaluate(() => Math.ceil(document.documentElement.scrollHeight));
+            const pageHeight = Math.max(1080, contentHeight);
+            pdfs.push(await page.pdf({ printBackground: true, width: '1920px', height: `${pageHeight}px` }));
+        }
+
+        const mergedPdf = await PDFDocument.create();
+        for (const pdfBytes of pdfs) {
+            const doc = await PDFDocument.load(pdfBytes);
+            const copied = await mergedPdf.copyPages(doc, doc.getPageIndices());
+            copied.forEach((pg) => mergedPdf.addPage(pg));
+        }
+        const mergedPdfBytes = await mergedPdf.save();
+        return Buffer.from(mergedPdfBytes).toString('base64');
+    } finally {
+        // Close only the page; the browser is reused for the next request.
+        await page.close().catch(() => {});
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Concurrency limiter — PDF rendering is CPU/memory heavy, so cap how many run
+// at once (the rest queue). Prevents many simultaneous requests from exhausting
+// the container's memory. Tune with MAX_CONCURRENT_PDFS.
+// ---------------------------------------------------------------------------
+const MAX_CONCURRENT = Math.max(1, parseInt(process.env.MAX_CONCURRENT_PDFS || '3', 10));
+const QUEUE_WAIT_MS = 20000; // max time a request waits for a free slot
+let activeJobs = 0;
+const queue = [];
+
+function acquireSlot() {
+    return new Promise((resolve, reject) => {
+        if (activeJobs < MAX_CONCURRENT) {
+            activeJobs++;
+            return resolve();
+        }
+        const waiter = { resolve, reject, timer: null };
+        waiter.timer = setTimeout(() => {
+            const i = queue.indexOf(waiter);
+            if (i >= 0) queue.splice(i, 1);
+            reject(new Error('busy'));
+        }, QUEUE_WAIT_MS);
+        queue.push(waiter);
+    });
+}
+
+function releaseSlot() {
+    const next = queue.shift();
+    if (next) {
+        clearTimeout(next.timer);
+        next.resolve(); // hand the slot off; activeJobs stays the same
+    } else {
+        activeJobs--;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Routes
+// ---------------------------------------------------------------------------
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        browser: !!(_browser && _browser.isConnected()),
+        activeJobs,
+        queued: queue.length,
+    });
+});
+
+app.post('/generate-pdf', rateLimit({ windowMs: 60 * 1000, max: 10 }), async (req, res) => {
+    // Lead capture is handled by the Webflow form, not the backend — any
+    // leadData/to_email fields in the body are ignored.
+    const { reportData } = req.body || {};
     if (!reportData) {
         return res.status(400).json({ success: false, message: 'Missing report data' });
     }
 
-    // Log lead if data provided (usually during Download flow)
-    if (leadData && to_email) {
-        saveLead(to_email, leadData);
+    try {
+        await acquireSlot();
+    } catch (e) {
+        return res.status(503).json({ success: false, message: 'Server busy, please try again shortly.' });
     }
 
-    console.log('Incoming Report Summary:', JSON.stringify(reportData.summary, null, 2));
-    console.log('Incoming Rows Count:', reportData.rows ? reportData.rows.length : 0);
-    console.log('Round Name:', reportData.roundName);
+    console.log('Incoming Rows Count:', reportData.rows ? reportData.rows.length : 0, '| Round:', reportData.roundName);
 
     try {
-        console.log('Starting PDF generation for request...');
         const pdfBase64 = await generatePDFFromTemplates(reportData);
-        console.log('PDF generation complete. Sending response (Base64 length:', pdfBase64.length, ')');
+        console.log('PDF generation complete (Base64 length:', pdfBase64.length, ')');
         res.json({ success: true, pdfBase64 });
     } catch (error) {
         console.error('Error in /generate-pdf endpoint:', error);
         res.status(500).json({ success: false, message: 'Failed to generate PDF' });
+    } finally {
+        releaseSlot();
     }
 });
 
-// Email Endpoint
-app.post('/send-email', (req, res) => {
-    const { to_email, pdfBase64, summaryData, reportData } = req.body;
-
-    if (!to_email || (!pdfBase64 && !reportData)) {
-        return res.status(400).json({ success: false, message: 'Missing email, PDF data, or report data' });
-    }
-
-    // Respond immediately to the user
-    res.json({ success: true, message: 'Your report is being generated and will be emailed shortly!' });
-
-    // Process in the background
-    (async () => {
-        try {
-            console.log(`[Background Queue] Processing email for ${to_email}...`);
-            let finalPdfBase64 = pdfBase64;
-            if (!finalPdfBase64 && reportData) {
-                console.log(`[Background Queue] Generating PDF first for ${to_email}...`);
-                finalPdfBase64 = await generatePDFFromTemplates(reportData);
-            }
-            console.log(`[Background Queue] Generating email content for ${to_email}...`);
-            const info = await sendPDFReport(to_email, finalPdfBase64, summaryData);
-            console.log(`[Background Queue] Email sent successfully to: ${to_email} | MessageId: ${info.messageId}`);
-        } catch (error) {
-            console.error(`[Background Queue] SEVERE ERROR for ${to_email}:`, error.message);
-            console.error(error.stack);
-        }
-    })();
-});
-
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    if (ALLOWED_ORIGINS.length === 0) {
+        console.warn('WARNING: ALLOWED_ORIGINS is not set — CORS is open to all origins. Set it in production.');
+    }
+    console.log(`PDF concurrency limit: ${MAX_CONCURRENT}`);
 });
+
+// Graceful shutdown — close the shared browser and the HTTP server.
+async function shutdown(signal) {
+    console.log(`Received ${signal}, shutting down...`);
+    try { if (_browser) await _browser.close(); } catch (e) { /* noop */ }
+    server.close(() => process.exit(0));
+    // Failsafe if connections hang.
+    setTimeout(() => process.exit(0), 5000).unref();
+}
+['SIGTERM', 'SIGINT'].forEach((sig) => process.on(sig, () => shutdown(sig)));

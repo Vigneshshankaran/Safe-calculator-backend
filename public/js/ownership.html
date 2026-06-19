@@ -33,8 +33,8 @@
       }
     </style>
   <body class="bg-[#e5e5e5] font-['Inter',sans-serif]">
-    <div style="width: 1920px; height: 1080px; position: relative; background: white; margin: 0 auto; overflow: hidden;">
-      <div class="bg-white relative size-full">
+    <div style="width: 1920px; min-height: 1080px; position: relative; background: white; margin: 0 auto;">
+      <div class="bg-white relative w-full">
         <!-- Synchronized Header -->
         <div class="absolute border-[#4039a8] border-b-[3px] border-solid h-[103px] left-[260px] top-0 w-[1660px]"></div>
         <div class="absolute bg-[#4039a8] h-[103px] left-0 top-0 w-[260px] flex items-center justify-center">
@@ -64,10 +64,10 @@
 
         <div class="absolute leading-[0.9] right-[50px] text-right top-[26px] tracking-[-0.6px]">
           <p class="font-['Inter:Medium',sans-serif] font-medium text-black text-[20px]">Generated on</p>
-          <p class="font-['Inter:Regular',sans-serif] font-normal text-[#6c6c6c] text-[20px] timestamp-value mt-1">February 7, 2026 at 12:45 PM</p>
+          <p class="font-['Inter:Regular',sans-serif] font-normal text-[#6c6c6c] text-[20px] timestamp-value mt-1"></p>
         </div>
 
-        <div class="absolute w-full top-[103px] left-0 px-[10px]">
+        <div class="w-full px-[10px]" style="padding-top: 103px;">
               <div class="mt-[10px] px-[10px]">
                 <div
                   class="border border-[#919191] border-opacity-33 p-[20px] rounded-sm min-h-[763px]"
@@ -124,20 +124,22 @@
                       <span
                         id="total-pre"
                         class="text-[25px] font-semibold text-[#494949] tracking-[-0.75px] text-right"
-                        >0</span
+                        >—</span
                       >
                       <span
                         id="total-post"
                         class="text-[25px] font-semibold text-[#4039a8] tracking-[-0.75px] text-right"
-                        >0</span
+                        >—</span
                       >
                       <span
+                        id="total-pre-pct"
                         class="text-[25px] font-semibold text-[#494949] tracking-[-0.75px] text-right"
-                        >100.00%</span
+                        >—</span
                       >
                       <span
+                        id="total-post-pct"
                         class="text-[25px] font-semibold text-[#4039a8] tracking-[-0.75px] text-right"
-                        >100.00%</span
+                        >—</span
                       >
                       <span
                         class="text-[25px] font-semibold text-[#4039a8] tracking-[-0.75px] text-right"
