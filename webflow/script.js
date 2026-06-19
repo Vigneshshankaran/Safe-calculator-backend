@@ -1669,112 +1669,114 @@ Email, Toast, and PDF generation logic.
 // Local dev points at the server.js PDF backend on port 3005.
 const BASE_URL = "https://safe-calculator-backend.onrender.com";
 
-// ── Webflow lead capture ──────────────────────────────────────────────────
-// The download modal feeds the native Webflow form on the page: we fill its
-// fields and trigger Webflow's own submit so the lead is stored in Webflow
-// (Forms tab + any integrations) and Cloudflare Turnstile is satisfied.
-//
-// WEBFLOW_FORM_SELECTOR must match the form on your page. WEBFLOW_FIELDS maps
-// to each Webflow field's `name` attribute (case-sensitive). If the form isn't
-// found, the download still proceeds — lead capture just no-ops.
+// ── Webflow lead form, shown as a popup ────────────────────────────────────
+// Clicking "Download" opens the native Webflow form as a centered popup.
+// Because the form is VISIBLE, Cloudflare Turnstile works and the user can
+// submit it — the lead is stored in Webflow (Forms tab). On a successful
+// submit we generate and download the PDF. If the form isn't on the page,
+// showEmailModal() falls back to the built-in modal.
 const WEBFLOW_FORM_SELECTOR = "#wf-form-Safe-calculator-page";
-const WEBFLOW_FIELDS = {
-    firstName: "First-name",
-    lastName:  "Last-name",
-    email:     "email",
-    company:   "Company",
-    subscribe: "I-d-like-to-receive-news-and-updates-from-EquityList",
-};
 
 function findWebflowLeadForm() {
     return document.querySelector(WEBFLOW_FORM_SELECTOR)
         || document.querySelector('form[data-name="Safe calculator page"]');
 }
 
-// Hide the Webflow form WITHOUT display:none / opacity:0 / visibility:hidden —
-// those stop Cloudflare Turnstile from solving, which leaves the submit button
-// disabled forever. Pushing it off-screen keeps it fully rendered, so Turnstile
-// still auto-solves and the form stays submittable. Runs once on load so you
-// don't need any hide-CSS in the Webflow embed.
-function hideWebflowLeadForm() {
+function getWebflowWrap() {
     const form = findWebflowLeadForm();
-    if (!form) return;
-    const wrap = form.closest(".w-form") || form;
-    // Force the rendered-but-offscreen state with inline styles so any leftover
-    // hide-CSS in the embed (e.g. opacity:0 / display:none) can't re-break
-    // Turnstile. Inline styles beat non-!important stylesheet rules.
-    Object.assign(wrap.style, {
-        position: "absolute",
-        left: "-9999px",
-        top: "0",
-        width: "1px",
-        height: "1px",
-        overflow: "hidden",
-        opacity: "1",
-        visibility: "visible",
-        display: "block",
-        pointerEvents: "auto",
-    });
+    return form ? (form.closest(".w-form") || form) : null;
+}
+
+// Keep the Webflow form out of the page flow until the popup opens.
+function initWebflowLeadPopup() {
+    const wrap = getWebflowWrap();
+    if (wrap) wrap.style.display = "none";
 }
 if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", hideWebflowLeadForm);
+    document.addEventListener("DOMContentLoaded", initWebflowLeadPopup);
 } else {
-    hideWebflowLeadForm();
+    initWebflowLeadPopup();
 }
 
-// Fills the native Webflow form and submits it once Turnstile has produced a
-// token (Webflow keeps the submit button disabled until then). Fire-and-forget:
-// never blocks or fails the PDF download.
-function postLeadToWebflow(lead) {
+let _wfBackdrop = null;
+let _wfOnSuccess = null;
+
+window.closeWebflowLeadPopup = function () {
+    const wrap = getWebflowWrap();
+    if (wrap) wrap.style.display = "none";
+    if (_wfBackdrop) _wfBackdrop.style.display = "none";
+};
+
+// Opens the Webflow form as a centered modal. Returns false if the form isn't
+// on the page (caller then falls back to the built-in modal).
+function openWebflowLeadPopup(onSuccess) {
+    const form = findWebflowLeadForm();
+    if (!form) return false;
+    const wrap = form.closest(".w-form") || form;
+    _wfOnSuccess = onSuccess;
+
+    if (!_wfBackdrop) {
+        _wfBackdrop = document.createElement("div");
+        _wfBackdrop.style.cssText =
+            "position:fixed;inset:0;background:rgba(13,10,64,0.5);z-index:99998;";
+        _wfBackdrop.addEventListener("click", window.closeWebflowLeadPopup);
+        document.body.appendChild(_wfBackdrop);
+    }
+    _wfBackdrop.style.display = "block";
+
+    // Show the form centered as a card — VISIBLE so Turnstile can render/solve.
+    wrap.style.cssText =
+        "display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);" +
+        "z-index:99999;box-sizing:border-box;background:#fff;padding:24px;border-radius:12px;" +
+        "max-width:440px;width:calc(100% - 32px);max-height:90vh;overflow:auto;" +
+        "box-shadow:0 20px 60px rgba(13,10,64,0.25);font-family:'Inter',sans-serif;";
+
+    // When Webflow shows its success state, fire the callback once (→ PDF).
+    const doneEl = wrap.querySelector(".w-form-done");
+    if (doneEl && !doneEl._svObserved) {
+        doneEl._svObserved = true;
+        const obs = new MutationObserver(() => {
+            if (getComputedStyle(doneEl).display !== "none") {
+                const cb = _wfOnSuccess;
+                _wfOnSuccess = null;
+                window.closeWebflowLeadPopup();
+                if (typeof cb === "function") cb();
+            }
+        });
+        obs.observe(doneEl, { attributes: true, attributeFilter: ["style"] });
+    }
+    return true;
+}
+
+// Generates the PDF from the current calculator state and downloads it.
+async function downloadReportPdf(company) {
     try {
-        const form = findWebflowLeadForm();
-        if (!form) { console.warn("Webflow form not found:", WEBFLOW_FORM_SELECTOR); return; }
-
-        const setField = (name, value) => {
-            const el = form.querySelector('[name="' + name + '"]');
-            if (!el) return;
-            if (el.type === "checkbox") el.checked = !!value;
-            else el.value = value == null ? "" : String(value);
-            // Let Webflow's validation/listeners see the change.
-            el.dispatchEvent(new Event("input",  { bubbles: true }));
-            el.dispatchEvent(new Event("change", { bubbles: true }));
-        };
-
-        setField(WEBFLOW_FIELDS.firstName, lead.firstName);
-        setField(WEBFLOW_FIELDS.lastName,  lead.lastName);
-        setField(WEBFLOW_FIELDS.email,     lead.email);
-        setField(WEBFLOW_FIELDS.company,   lead.company);
-        setField(WEBFLOW_FIELDS.subscribe, lead.subscribe);
-
-        const wrap = form.closest(".w-form") || form;
-        const submitBtn = form.querySelector('input[type="submit"], button[type="submit"], .w-button');
-        const tokenEl = form.querySelector('[name="cf-turnstile-response"]');
-
-        // Poll until Webflow/Turnstile is ready (submit enabled + token present),
-        // then click so Webflow's own AJAX handler stores the lead. Clicking a
-        // disabled button does nothing, which is why we wait. Webflow calls
-        // preventDefault on submit, so this never navigates the page.
-        let attempts = 0;
-        const maxAttempts = 40; // ~20s at 500ms
-        const trySubmit = () => {
-            const loading = wrap.classList.contains("w-form-loading");
-            const tokenReady = !tokenEl || (tokenEl.value && tokenEl.value.length > 10);
-            const enabled = submitBtn && !submitBtn.disabled;
-            if (enabled && tokenReady && !loading) {
-                submitBtn.click();
-                return;
-            }
-            if (attempts++ < maxAttempts) {
-                setTimeout(trySubmit, 500);
-            } else if (submitBtn) {
-                submitBtn.click(); // last-ditch attempt after timeout
-            }
-        };
-        trySubmit();
+        showToast("Generating report…", "success");
+        const reportData = prepareReportData(company || "");
+        const response = await fetch(`${BASE_URL}/generate-pdf`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reportData }),
+        });
+        if (!response.ok) throw new Error("Failed to generate PDF");
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message || "Failed to generate PDF");
+        const bytes = Uint8Array.from(atob(result.pdfBase64), (c) => c.charCodeAt(0));
+        const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `SAFE_Calculator_Report_${new Date().toISOString().split("T")[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast("Report downloaded!", "success");
     } catch (e) {
-        console.warn("Webflow lead submit failed (download continues):", e);
+        console.error("Download error:", e);
+        showToast(e.message || "Error generating report", "error");
     }
 }
+window.downloadReportPdf = downloadReportPdf;
 
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast-notification');
@@ -1996,6 +1998,16 @@ const prepareReportData = (companyName) => {
 
 // ── Download lead-capture flow (no email sending) ──
 window.showEmailModal = function() {
+    // Prefer the native Webflow form as a popup → captures the lead in Webflow,
+    // then downloads the PDF on success. Falls back to the built-in modal when
+    // the Webflow form isn't on the page (e.g. standalone/local use).
+    const opened = openWebflowLeadPopup(() => {
+        const wrap = getWebflowWrap();
+        const companyEl = wrap && wrap.querySelector('[name="Company"]');
+        downloadReportPdf(companyEl ? companyEl.value.trim() : "");
+    });
+    if (opened) return;
+
     const modal = document.getElementById('email-modal');
     if (!modal) return;
 
@@ -2073,10 +2085,6 @@ window.submitDownloadForm = async function() {
 
     try {
         const reportData = prepareReportData(company);
-
-        // Send the captured lead to Webflow (fire-and-forget; never blocks the
-        // download). Configure WEBFLOW_FORM_ENDPOINT/WEBFLOW_FIELDS above.
-        postLeadToWebflow({ firstName, lastName, email, company, subscribe });
 
         // The backend only generates the PDF — it no longer stores leads.
         const response = await fetch(`${BASE_URL}/generate-pdf`, {
