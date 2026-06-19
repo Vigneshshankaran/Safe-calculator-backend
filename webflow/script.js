@@ -1686,12 +1686,41 @@ const WEBFLOW_FIELDS = {
     subscribe: "I-d-like-to-receive-news-and-updates-from-EquityList",
 };
 
-// Fills + submits the native Webflow form. Fire-and-forget: never blocks or
-// fails the PDF download.
+function findWebflowLeadForm() {
+    return document.querySelector(WEBFLOW_FORM_SELECTOR)
+        || document.querySelector('form[data-name="Safe calculator page"]');
+}
+
+// Hide the Webflow form WITHOUT display:none / opacity:0 / visibility:hidden —
+// those stop Cloudflare Turnstile from solving, which leaves the submit button
+// disabled forever. Pushing it off-screen keeps it fully rendered, so Turnstile
+// still auto-solves and the form stays submittable. Runs once on load so you
+// don't need any hide-CSS in the Webflow embed.
+function hideWebflowLeadForm() {
+    const form = findWebflowLeadForm();
+    if (!form) return;
+    const wrap = form.closest(".w-form") || form;
+    Object.assign(wrap.style, {
+        position: "absolute",
+        left: "-9999px",
+        top: "0",
+        width: "1px",
+        height: "1px",
+        overflow: "hidden",
+    });
+}
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", hideWebflowLeadForm);
+} else {
+    hideWebflowLeadForm();
+}
+
+// Fills the native Webflow form and submits it once Turnstile has produced a
+// token (Webflow keeps the submit button disabled until then). Fire-and-forget:
+// never blocks or fails the PDF download.
 function postLeadToWebflow(lead) {
     try {
-        const form = document.querySelector(WEBFLOW_FORM_SELECTOR)
-                  || document.querySelector('form[data-name="Safe calculator page"]');
+        const form = findWebflowLeadForm();
         if (!form) { console.warn("Webflow form not found:", WEBFLOW_FORM_SELECTOR); return; }
 
         const setField = (name, value) => {
@@ -1710,13 +1739,31 @@ function postLeadToWebflow(lead) {
         setField(WEBFLOW_FIELDS.company,   lead.company);
         setField(WEBFLOW_FIELDS.subscribe, lead.subscribe);
 
-        // Click the submit button so Webflow's own handler runs (AJAX submit,
-        // Turnstile token, success/fail states). Webflow's JS calls
-        // preventDefault, so this never navigates the page.
+        const wrap = form.closest(".w-form") || form;
         const submitBtn = form.querySelector('input[type="submit"], button[type="submit"], .w-button');
-        if (submitBtn) submitBtn.click();
-        else if (typeof form.requestSubmit === "function") form.requestSubmit();
-        else form.submit();
+        const tokenEl = form.querySelector('[name="cf-turnstile-response"]');
+
+        // Poll until Webflow/Turnstile is ready (submit enabled + token present),
+        // then click so Webflow's own AJAX handler stores the lead. Clicking a
+        // disabled button does nothing, which is why we wait. Webflow calls
+        // preventDefault on submit, so this never navigates the page.
+        let attempts = 0;
+        const maxAttempts = 40; // ~20s at 500ms
+        const trySubmit = () => {
+            const loading = wrap.classList.contains("w-form-loading");
+            const tokenReady = !tokenEl || (tokenEl.value && tokenEl.value.length > 10);
+            const enabled = submitBtn && !submitBtn.disabled;
+            if (enabled && tokenReady && !loading) {
+                submitBtn.click();
+                return;
+            }
+            if (attempts++ < maxAttempts) {
+                setTimeout(trySubmit, 500);
+            } else if (submitBtn) {
+                submitBtn.click(); // last-ditch attempt after timeout
+            }
+        };
+        trySubmit();
     } catch (e) {
         console.warn("Webflow lead submit failed (download continues):", e);
     }
