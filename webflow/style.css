@@ -1882,7 +1882,18 @@
 
 .safe-calculator-widget .toast-notification.error {
   border-left: 4px solid #ef4444;
-}@keyframes spin {
+}
+
+.safe-calculator-widget .w-form-done-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2.5px solid #eae7ff;
+  border-top-color: #5f46ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
   from {
     transform: rotate(0deg);
   }

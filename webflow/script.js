@@ -1724,6 +1724,32 @@ function openWebflowLeadPopup(onSuccess) {
     }
     _wfBackdrop.style.display = "block";
 
+    // Ensure the form is visible and any done/fail states are hidden when opening
+    form.style.display = "block";
+    const doneEl = wrap.querySelector(".w-form-done");
+    if (doneEl) {
+        doneEl.style.display = "none";
+        if (doneEl._originalContent) {
+            doneEl.innerHTML = doneEl._originalContent;
+        }
+    }
+    const failEl = wrap.querySelector(".w-form-fail");
+    if (failEl) failEl.style.display = "none";
+
+    const submitBtn = form.querySelector('input[type="submit"]') || form.querySelector('button[type="submit"]') || form.querySelector('.w-button');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = "";
+        submitBtn.style.pointerEvents = "";
+        if (submitBtn.tagName === 'INPUT') {
+            if (!submitBtn._originalValue) submitBtn._originalValue = submitBtn.value;
+            submitBtn.value = submitBtn._originalValue;
+        } else {
+            if (!submitBtn._originalText) submitBtn._originalText = submitBtn.textContent;
+            submitBtn.textContent = submitBtn._originalText;
+        }
+    }
+
     // Neutralize any leftover hide-CSS on the form itself (e.g. opacity:0 /
     // left:-9999px from the embed) so it's fully visible inside the popup.
     form.style.cssText =
@@ -1736,16 +1762,54 @@ function openWebflowLeadPopup(onSuccess) {
         "max-width:440px;width:calc(100% - 32px);max-height:90vh;overflow:auto;" +
         "box-shadow:0 20px 60px rgba(13,10,64,0.25);font-family:'Inter',sans-serif;";
 
+    // Intercept submit on the Webflow form to show a loading state
+    if (!form._wfSubmitObserved) {
+        form._wfSubmitObserved = true;
+        form.addEventListener("submit", () => {
+            const btn = form.querySelector('input[type="submit"]') || form.querySelector('button[type="submit"]') || form.querySelector('.w-button');
+            if (btn) {
+                btn.setAttribute('data-wait', 'Generating...');
+                btn.disabled = true;
+                if (btn.tagName === 'INPUT') {
+                    if (!btn._originalValue) btn._originalValue = btn.value;
+                    btn.value = "Generating...";
+                } else {
+                    if (!btn._originalText) btn._originalText = btn.textContent;
+                    btn.textContent = "Generating...";
+                }
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
+            }
+        });
+    }
+
     // When Webflow shows its success state, fire the callback once (→ PDF).
-    const doneEl = wrap.querySelector(".w-form-done");
     if (doneEl && !doneEl._svObserved) {
         doneEl._svObserved = true;
-        const obs = new MutationObserver(() => {
+        const obs = new MutationObserver(async () => {
             if (getComputedStyle(doneEl).display !== "none") {
                 const cb = _wfOnSuccess;
                 _wfOnSuccess = null;
+                if (typeof cb === "function") {
+                    // Temporarily replace content of doneEl with our beautiful spinner loader
+                    if (!doneEl._originalContent) {
+                        doneEl._originalContent = doneEl.innerHTML;
+                    }
+                    doneEl.innerHTML = `
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px 0; text-align: center;">
+                            <div class="w-form-done-spinner"></div>
+                            <div style="font-weight: 500; font-size: 15px; color: #111;">Generating report...</div>
+                            <div style="font-size: 13px; color: #666;">Please wait while we prepare your PDF.</div>
+                        </div>
+                    `;
+
+                    try {
+                        await cb();
+                    } catch (err) {
+                        console.error("PDF generation failed in Webflow flow:", err);
+                    }
+                }
                 window.closeWebflowLeadPopup();
-                if (typeof cb === "function") cb();
             }
         });
         obs.observe(doneEl, { attributes: true, attributeFilter: ["style"] });
@@ -2009,7 +2073,7 @@ window.showEmailModal = function() {
     const opened = openWebflowLeadPopup(() => {
         const wrap = getWebflowWrap();
         const companyEl = wrap && wrap.querySelector('[name="Company"]');
-        downloadReportPdf(companyEl ? companyEl.value.trim() : "");
+        return downloadReportPdf(companyEl ? companyEl.value.trim() : "");
     });
     if (opened) return;
 
