@@ -1678,8 +1678,31 @@ const BASE_URL = "https://safe-calculator-backend.onrender.com";
 const WEBFLOW_FORM_SELECTOR = "#wf-form-Safe-calculator-page";
 
 function findWebflowLeadForm() {
-    return document.querySelector(WEBFLOW_FORM_SELECTOR)
-        || document.querySelector('form[data-name="Safe calculator page"]');
+    // 1. Try exact selector
+    let form = document.querySelector(WEBFLOW_FORM_SELECTOR);
+    if (form) return form;
+
+    // 2. Try exact Webflow data-name
+    form = document.querySelector('form[data-name="Safe calculator page"]');
+    if (form) return form;
+
+    // 3. Try any form inside a Webflow form wrapper (.w-form)
+    const wForms = document.querySelectorAll('.w-form form');
+    for (const f of wForms) {
+        if (f.id !== 'email-modal' && !f.closest('#email-modal')) {
+            return f;
+        }
+    }
+
+    // 4. Try any form element on the page as fallback
+    const allForms = document.querySelectorAll('form');
+    for (const f of allForms) {
+        if (f.id !== 'email-modal' && !f.closest('#email-modal')) {
+            return f;
+        }
+    }
+
+    return null;
 }
 
 function getWebflowWrap() {
