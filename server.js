@@ -314,6 +314,13 @@ const server = app.listen(PORT, () => {
         console.warn('WARNING: ALLOWED_ORIGINS is not set — CORS is open to all origins. Set it in production.');
     }
     console.log(`PDF concurrency limit: ${MAX_CONCURRENT}`);
+
+    // Pre-warm Chromium at boot so the first PDF request doesn't pay the
+    // browser-launch cost (~3-5s). On Render this runs while the container is
+    // waking, so by the time the first request lands the browser is ready.
+    getBrowser()
+        .then(() => console.log('Browser pre-warmed and ready.'))
+        .catch((e) => console.warn('Browser pre-warm failed (will retry on first request):', e.message));
 });
 
 // Graceful shutdown — close the shared browser and the HTTP server.
