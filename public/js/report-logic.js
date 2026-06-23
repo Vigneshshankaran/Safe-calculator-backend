@@ -146,17 +146,17 @@ function syncReport() {
         const rowTop = 261 + (i * 45);
         const lineTop = rowTop + 28;
         let html = `<div class="absolute contents font-['Inter:Semi_Bold',sans-serif] font-semibold leading-[0.9] text-[#0d0d0d] text-[15px] tracking-[-0.45px]">`;
-        html += `<div class="absolute left-[30px] top-[${rowTop}px] flex items-center">`;
+        html += `<div class="absolute left-[30px] flex items-center" style="top:${rowTop}px">`;
         html += `<span>${esc(s.name)}</span>`;
         if (s.badge) {
             html += `<span class="inline-flex items-center px-1.5 py-0.5 rounded-[7px] border ${esc(s.badgeStyle || "")} text-[10px] font-semibold tracking-[-0.3px] leading-[0.9] ml-2 whitespace-nowrap">${esc(s.badge)}</span>`;
         }
         html += `</div>`;
-        html += `<p class="-translate-x-full absolute left-[410px] text-right top-[${rowTop}px]">$${(s.investment || 0).toLocaleString()}</p>`;
-        html += `<p class="-translate-x-full absolute left-[619px] text-right top-[${rowTop}px]">$${(s.cap || 0).toLocaleString()}</p>`;
-        html += `<p class="-translate-x-full absolute left-[788px] text-right top-[${rowTop}px]">${esc(s.discount || "None")}</p>`;
-        html += `<p class="-translate-x-full absolute left-[918px] text-right top-[${rowTop}px]">${esc(s.type || "Post-money")}</p>`;
-        html += `<div class="absolute h-0 left-[26px] top-[${lineTop}px] w-[912px]"><div class="absolute inset-[-0.25px_0]"><svg class="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 912 0.5"><path d="M0 0.25H912" stroke="#D2D2D2" stroke-width="0.5"></path></svg></div></div>`;
+        html += `<p class="-translate-x-full absolute left-[410px] text-right" style="top:${rowTop}px">$${(s.investment || 0).toLocaleString()}</p>`;
+        html += `<p class="-translate-x-full absolute left-[619px] text-right" style="top:${rowTop}px">$${(s.cap || 0).toLocaleString()}</p>`;
+        html += `<p class="-translate-x-full absolute left-[788px] text-right" style="top:${rowTop}px">${esc(s.discount || "None")}</p>`;
+        html += `<p class="-translate-x-full absolute left-[918px] text-right" style="top:${rowTop}px">${esc(s.type || "Post-money")}</p>`;
+        html += `<div class="absolute h-0 left-[26px] w-[912px]" style="top:${lineTop}px"><div class="absolute inset-[-0.25px_0]"><svg class="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 912 0.5"><path d="M0 0.25H912" stroke="#D2D2D2" stroke-width="0.5"></path></svg></div></div>`;
         html += `</div>`;
         return html;
     }).join("");
@@ -182,7 +182,7 @@ function syncReport() {
         const row = Math.floor(i / 2);
         const left = col === 0 ? 970 : 1445;
         const top = 195 + (row * 60);
-        let html = `<div class="absolute left-[${left}px] top-[${top}px] w-[465px] h-[55px] bg-[#eeebfb] border border-[#4039a8] border-solid flex items-center px-[10px] justify-between">`;
+        let html = `<div class="absolute w-[465px] h-[55px] bg-[#eeebfb] border border-[#4039a8] border-solid flex items-center px-[10px] justify-between" style="left:${left}px;top:${top}px">`;
         html += `<div class="flex items-center">`;
         html += `<p class="font-semibold text-[#4039a8] text-[15px]">${esc(inv.name)}</p>`;
         html += `</div>`;
