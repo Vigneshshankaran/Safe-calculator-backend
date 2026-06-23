@@ -161,83 +161,93 @@ async function getBrowser() {
     return _launching;
 }
 
-async function generatePDFFromTemplates(reportData) {
-    const browser = await getBrowser();
+// Render a single report template to a PDF buffer in its own tab.
+async function renderTemplateToPdf(browser, file, reportData) {
     const page = await browser.newPage();
-    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
-    page.on('pageerror', (err) => console.error('PAGE ERROR:', err.message));
-    await page.setCacheEnabled(false);
+    page.on('pageerror', (err) => console.error(`PAGE ERROR (${file}):`, err.message));
+    // Reuse cached static assets (Google Fonts CSS/woff, chart.js, tailwind.js)
+    // across renders instead of re-fetching/re-parsing them every time.
+    await page.setCacheEnabled(true);
     // Bound every page operation so a misbehaving render can't hold a slot forever.
     page.setDefaultNavigationTimeout(20000);
     page.setDefaultTimeout(20000);
 
     try {
-        const pdfs = [];
-        const files = ['summary.html', 'ownership.html', 'terms2.html'];
+        const absPath = path.resolve(__dirname, 'public', 'js', file);
+        const filePath = `file:///${absPath.replace(/\\/g, '/')}`;
+        await page.goto(filePath, { waitUntil: 'load' });
 
-        for (const file of files) {
-            const absPath = path.resolve(__dirname, 'public', 'js', file);
-            const filePath = `file:///${absPath.replace(/\\/g, '/')}`;
-            await page.goto(filePath, { waitUntil: 'load' });
-
-            // report-config.js declares `const reportData = {...defaults...}` as a
-            // top-level lexical binding (not window.reportData). syncReport() reads
-            // that binding, so we mutate it in place, then re-render.
-            await page.evaluate((data) => {
-                try {
-                    if (typeof reportData === 'object' && reportData) {
-                        Object.keys(reportData).forEach((k) => { delete reportData[k]; });
-                        Object.assign(reportData, data);
-                    }
-                } catch (e) {
-                    console.warn('Could not patch reportData binding:', e.message);
+        // report-config.js declares `const reportData = {...defaults...}` as a
+        // top-level lexical binding (not window.reportData). syncReport() reads
+        // that binding, so we mutate it in place, then re-render.
+        await page.evaluate((data) => {
+            try {
+                if (typeof reportData === 'object' && reportData) {
+                    Object.keys(reportData).forEach((k) => { delete reportData[k]; });
+                    Object.assign(reportData, data);
                 }
-                window.reportData = data;
-                if (typeof syncReport === 'function') syncReport();
-                else console.warn('syncReport not found on page');
-            }, reportData);
+            } catch (e) {
+                console.warn('Could not patch reportData binding:', e.message);
+            }
+            window.reportData = data;
+            if (typeof syncReport === 'function') syncReport();
+            else console.warn('syncReport not found on page');
+        }, reportData);
 
-            // Wait for an explicit render-complete signal instead of a fixed sleep.
-            await page.waitForFunction('window.__renderDone === true', { timeout: 5000 }).catch(() => {
-                console.warn(`Render signal not received for ${file}; proceeding.`);
-            });
-            // Ensure web fonts are ready, then a short settle for canvas paint.
-            try { await page.evaluate(() => (document.fonts ? document.fonts.ready : null)); } catch (e) { /* noop */ }
-            await new Promise((r) => setTimeout(r, 250));
+        // Wait for an explicit render-complete signal instead of a fixed sleep.
+        await page.waitForFunction('window.__renderDone === true', { timeout: 5000 }).catch(() => {
+            console.warn(`Render signal not received for ${file}; proceeding.`);
+        });
+        // Ensure web fonts are ready, then a short settle for canvas paint.
+        try { await page.evaluate(() => (document.fonts ? document.fonts.ready : null)); } catch (e) { /* noop */ }
+        await new Promise((r) => setTimeout(r, 250));
 
-            // Grow any marked "slide" to fit its content — done here, AFTER fonts
-            // are ready, so the measured layout is final (pre-font measurement
-            // would under-size the page and clip reflowed text).
-            await page.evaluate(() => { if (typeof fitPageHeight === 'function') fitPageHeight(); }).catch(() => {});
+        // Grow any marked "slide" to fit its content — done here, AFTER fonts
+        // are ready, so the measured layout is final (pre-font measurement
+        // would under-size the page and clip reflowed text).
+        await page.evaluate(() => { if (typeof fitPageHeight === 'function') fitPageHeight(); }).catch(() => {});
 
-            // Pages are 1920x1080 "slides", but the cap-table page grows with the
-            // number of shareholders. Render at the content's natural height so
-            // nothing is clipped; pages that fit stay at the standard 1080.
-            const contentHeight = await page.evaluate(() => Math.ceil(document.documentElement.scrollHeight));
-            const pageHeight = Math.max(1080, contentHeight);
-            pdfs.push(await page.pdf({ printBackground: true, width: '1920px', height: `${pageHeight}px` }));
-        }
-
-        const mergedPdf = await PDFDocument.create();
-        for (const pdfBytes of pdfs) {
-            const doc = await PDFDocument.load(pdfBytes);
-            const copied = await mergedPdf.copyPages(doc, doc.getPageIndices());
-            copied.forEach((pg) => mergedPdf.addPage(pg));
-        }
-        const mergedPdfBytes = await mergedPdf.save();
-        return Buffer.from(mergedPdfBytes).toString('base64');
+        // Pages are 1920x1080 "slides", but the cap-table page grows with the
+        // number of shareholders. Render at the content's natural height so
+        // nothing is clipped; pages that fit stay at the standard 1080.
+        const contentHeight = await page.evaluate(() => Math.ceil(document.documentElement.scrollHeight));
+        const pageHeight = Math.max(1080, contentHeight);
+        return await page.pdf({ printBackground: true, width: '1920px', height: `${pageHeight}px` });
     } finally {
         // Close only the page; the browser is reused for the next request.
         await page.close().catch(() => {});
     }
 }
 
+async function generatePDFFromTemplates(reportData) {
+    const browser = await getBrowser();
+    const files = ['summary.html', 'ownership.html', 'terms2.html'];
+
+    // Render all three pages concurrently (one tab each). Promise.all preserves
+    // input order, so the merge stays summary → ownership → terms. Wall-clock
+    // drops from the sum of three renders to roughly the slowest single one.
+    const pdfs = await Promise.all(
+        files.map((file) => renderTemplateToPdf(browser, file, reportData))
+    );
+
+    const mergedPdf = await PDFDocument.create();
+    for (const pdfBytes of pdfs) {
+        const doc = await PDFDocument.load(pdfBytes);
+        const copied = await mergedPdf.copyPages(doc, doc.getPageIndices());
+        copied.forEach((pg) => mergedPdf.addPage(pg));
+    }
+    const mergedPdfBytes = await mergedPdf.save();
+    return Buffer.from(mergedPdfBytes).toString('base64');
+}
+
 // ---------------------------------------------------------------------------
 // Concurrency limiter — PDF rendering is CPU/memory heavy, so cap how many run
 // at once (the rest queue). Prevents many simultaneous requests from exhausting
-// the container's memory. Tune with MAX_CONCURRENT_PDFS.
+// the container's memory. NOTE: each job now opens 3 tabs in parallel (one per
+// template), so peak tabs ≈ MAX_CONCURRENT × 3 — on a small (512MB) instance
+// keep this at 2. Tune with MAX_CONCURRENT_PDFS.
 // ---------------------------------------------------------------------------
-const MAX_CONCURRENT = Math.max(1, parseInt(process.env.MAX_CONCURRENT_PDFS || '3', 10));
+const MAX_CONCURRENT = Math.max(1, parseInt(process.env.MAX_CONCURRENT_PDFS || '2', 10));
 const QUEUE_WAIT_MS = 20000; // max time a request waits for a free slot
 let activeJobs = 0;
 const queue = [];
