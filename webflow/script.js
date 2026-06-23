@@ -1921,10 +1921,91 @@ function openWebflowLeadPopup(onSuccess) {
     return true;
 }
 
+// ---------------------------------------------------------------------------
+// Full-screen white PDF loading overlay with a live percentage.
+// The backend returns the PDF in a single response (no streamed progress), so
+// the percentage is an eased simulation: it climbs toward ~90% while we wait,
+// then snaps to 100% the instant the PDF is ready.
+// ---------------------------------------------------------------------------
+let _pdfLoaderEl = null;
+let _pdfLoaderTimer = null;
+const _PDF_RING_R = 52;
+const _PDF_RING_C = 2 * Math.PI * _PDF_RING_R;
+
+function ensurePdfLoaderStyles() {
+    if (document.getElementById("sv-pdf-loader-style")) return;
+    const css = `
+#sv-pdf-loader{position:fixed;inset:0;background:#ffffff;display:flex;align-items:center;justify-content:center;z-index:100000;font-family:'Inter',-apple-system,sans-serif;}
+#sv-pdf-loader .sv-pdf-card{display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;padding:24px;}
+#sv-pdf-loader .sv-pdf-ring{position:relative;width:120px;height:120px;}
+#sv-pdf-loader .sv-pdf-ring svg{width:120px;height:120px;transform:rotate(-90deg);}
+#sv-pdf-loader .sv-pdf-ring-bg{fill:none;stroke:#eae7ff;stroke-width:8;}
+#sv-pdf-loader .sv-pdf-ring-fg{fill:none;stroke:#5f46ff;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .25s ease;}
+#sv-pdf-loader .sv-pdf-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#0d0a40;letter-spacing:-0.02em;}
+#sv-pdf-loader .sv-pdf-title{font-size:18px;font-weight:600;color:#0d0a40;}
+#sv-pdf-loader .sv-pdf-sub{font-size:13px;color:#6c6c8a;}`;
+    const tag = document.createElement("style");
+    tag.id = "sv-pdf-loader-style";
+    tag.textContent = css;
+    document.head.appendChild(tag);
+}
+
+function setPdfLoaderPct(pct) {
+    if (!_pdfLoaderEl) return;
+    const p = Math.max(0, Math.min(100, Math.round(pct)));
+    const fg = _pdfLoaderEl.querySelector(".sv-pdf-ring-fg");
+    const txt = _pdfLoaderEl.querySelector(".sv-pdf-pct");
+    if (fg) fg.style.strokeDashoffset = String(_PDF_RING_C * (1 - p / 100));
+    if (txt) txt.textContent = p + "%";
+}
+
+function showPdfLoader() {
+    ensurePdfLoaderStyles();
+    if (!_pdfLoaderEl) {
+        _pdfLoaderEl = document.createElement("div");
+        _pdfLoaderEl.id = "sv-pdf-loader";
+        _pdfLoaderEl.innerHTML =
+            '<div class="sv-pdf-card">' +
+              '<div class="sv-pdf-ring">' +
+                '<svg viewBox="0 0 120 120">' +
+                  '<circle class="sv-pdf-ring-bg" cx="60" cy="60" r="' + _PDF_RING_R + '"></circle>' +
+                  '<circle class="sv-pdf-ring-fg" cx="60" cy="60" r="' + _PDF_RING_R + '" ' +
+                    'stroke-dasharray="' + _PDF_RING_C + '" stroke-dashoffset="' + _PDF_RING_C + '"></circle>' +
+                '</svg>' +
+                '<div class="sv-pdf-pct">0%</div>' +
+              '</div>' +
+              '<div class="sv-pdf-title">Generating your report</div>' +
+              '<div class="sv-pdf-sub">Please wait while we prepare your PDF…</div>' +
+            '</div>';
+        document.body.appendChild(_pdfLoaderEl);
+    }
+    _pdfLoaderEl.style.display = "flex";
+    let pct = 0;
+    setPdfLoaderPct(0);
+    clearInterval(_pdfLoaderTimer);
+    _pdfLoaderTimer = setInterval(() => {
+        // Ease toward 90%, slowing as it approaches so it never looks stuck at a number.
+        pct += Math.max(0.4, (90 - pct) * 0.05);
+        if (pct > 90) pct = 90;
+        setPdfLoaderPct(pct);
+    }, 130);
+}
+
+function hidePdfLoader(success) {
+    clearInterval(_pdfLoaderTimer);
+    if (!_pdfLoaderEl) return;
+    if (success) {
+        setPdfLoaderPct(100);
+        setTimeout(() => { if (_pdfLoaderEl) _pdfLoaderEl.style.display = "none"; }, 550);
+    } else {
+        _pdfLoaderEl.style.display = "none";
+    }
+}
+
 // Generates the PDF from the current calculator state and downloads it.
 async function downloadReportPdf(company) {
+    showPdfLoader();
     try {
-        showToast("Generating report…", "success");
         const reportData = prepareReportData(company || "");
         const response = await fetch(`${BASE_URL}/generate-pdf`, {
             method: "POST",
@@ -1943,9 +2024,11 @@ async function downloadReportPdf(company) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        hidePdfLoader(true);
         showToast("Report downloaded!", "success");
     } catch (e) {
         console.error("Download error:", e);
+        hidePdfLoader(false);
         showToast(e.message || "Error generating report", "error");
     }
 }
