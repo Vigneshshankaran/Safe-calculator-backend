@@ -1922,28 +1922,25 @@ function openWebflowLeadPopup(onSuccess) {
 }
 
 // ---------------------------------------------------------------------------
-// Full-screen white PDF loading overlay with a live percentage.
-// The backend returns the PDF in a single response (no streamed progress), so
-// the percentage is an eased simulation: it climbs toward ~90% while we wait,
-// then snaps to 100% the instant the PDF is ready.
+// Full-screen white PDF loading overlay: the original spinner look + a live
+// percentage. The backend returns the PDF in one response (no streamed
+// progress), so the percentage is a continuously-advancing estimate — it never
+// stalls on a number (which feels broken), easing toward 99% while we wait and
+// snapping to 100% the instant the PDF is ready.
 // ---------------------------------------------------------------------------
 let _pdfLoaderEl = null;
 let _pdfLoaderTimer = null;
-const _PDF_RING_R = 52;
-const _PDF_RING_C = 2 * Math.PI * _PDF_RING_R;
 
 function ensurePdfLoaderStyles() {
     if (document.getElementById("sv-pdf-loader-style")) return;
     const css = `
 #sv-pdf-loader{position:fixed;inset:0;background:#ffffff;display:flex;align-items:center;justify-content:center;z-index:100000;font-family:'Inter',-apple-system,sans-serif;}
-#sv-pdf-loader .sv-pdf-card{display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;padding:24px;}
-#sv-pdf-loader .sv-pdf-ring{position:relative;width:120px;height:120px;}
-#sv-pdf-loader .sv-pdf-ring svg{width:120px;height:120px;transform:rotate(-90deg);}
-#sv-pdf-loader .sv-pdf-ring-bg{fill:none;stroke:#eae7ff;stroke-width:8;}
-#sv-pdf-loader .sv-pdf-ring-fg{fill:none;stroke:#5f46ff;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .25s ease;}
-#sv-pdf-loader .sv-pdf-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#0d0a40;letter-spacing:-0.02em;}
-#sv-pdf-loader .sv-pdf-title{font-size:18px;font-weight:600;color:#0d0a40;}
-#sv-pdf-loader .sv-pdf-sub{font-size:13px;color:#6c6c8a;}`;
+#sv-pdf-loader .sv-pdf-card{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:24px;}
+#sv-pdf-loader .sv-pdf-spinner{width:56px;height:56px;border:5px solid #eae7ff;border-top-color:#5f46ff;border-radius:50%;animation:sv-pdf-spin .8s linear infinite;}
+#sv-pdf-loader .sv-pdf-pct{font-size:34px;font-weight:700;color:#0d0a40;letter-spacing:-0.02em;line-height:1;}
+#sv-pdf-loader .sv-pdf-title{font-size:16px;font-weight:600;color:#0d0a40;}
+#sv-pdf-loader .sv-pdf-sub{font-size:13px;color:#6c6c8a;}
+@keyframes sv-pdf-spin{to{transform:rotate(360deg);}}`;
     const tag = document.createElement("style");
     tag.id = "sv-pdf-loader-style";
     tag.textContent = css;
@@ -1953,9 +1950,7 @@ function ensurePdfLoaderStyles() {
 function setPdfLoaderPct(pct) {
     if (!_pdfLoaderEl) return;
     const p = Math.max(0, Math.min(100, Math.round(pct)));
-    const fg = _pdfLoaderEl.querySelector(".sv-pdf-ring-fg");
     const txt = _pdfLoaderEl.querySelector(".sv-pdf-pct");
-    if (fg) fg.style.strokeDashoffset = String(_PDF_RING_C * (1 - p / 100));
     if (txt) txt.textContent = p + "%";
 }
 
@@ -1966,14 +1961,8 @@ function showPdfLoader() {
         _pdfLoaderEl.id = "sv-pdf-loader";
         _pdfLoaderEl.innerHTML =
             '<div class="sv-pdf-card">' +
-              '<div class="sv-pdf-ring">' +
-                '<svg viewBox="0 0 120 120">' +
-                  '<circle class="sv-pdf-ring-bg" cx="60" cy="60" r="' + _PDF_RING_R + '"></circle>' +
-                  '<circle class="sv-pdf-ring-fg" cx="60" cy="60" r="' + _PDF_RING_R + '" ' +
-                    'stroke-dasharray="' + _PDF_RING_C + '" stroke-dashoffset="' + _PDF_RING_C + '"></circle>' +
-                '</svg>' +
-                '<div class="sv-pdf-pct">0%</div>' +
-              '</div>' +
+              '<div class="sv-pdf-spinner"></div>' +
+              '<div class="sv-pdf-pct">0%</div>' +
               '<div class="sv-pdf-title">Generating your report</div>' +
               '<div class="sv-pdf-sub">Please wait while we prepare your PDF…</div>' +
             '</div>';
@@ -1984,11 +1973,12 @@ function showPdfLoader() {
     setPdfLoaderPct(0);
     clearInterval(_pdfLoaderTimer);
     _pdfLoaderTimer = setInterval(() => {
-        // Ease toward 90%, slowing as it approaches so it never looks stuck at a number.
-        pct += Math.max(0.4, (90 - pct) * 0.05);
-        if (pct > 90) pct = 90;
+        // Always advance (min step) so it never looks frozen; ease toward 99%
+        // so there's headroom for the real 100% when the PDF arrives.
+        pct += Math.max(0.2, (99 - pct) * 0.03);
+        if (pct > 99) pct = 99;
         setPdfLoaderPct(pct);
-    }, 130);
+    }, 150);
 }
 
 function hidePdfLoader(success) {
