@@ -219,17 +219,26 @@ async function renderTemplateToPdf(browser, file, reportData) {
     }
 }
 
-async function generatePDFFromTemplates(reportData) {
+async function generatePDFFromTemplates(reportData, onProgress) {
+    const report = (p) => { if (typeof onProgress === 'function') onProgress(p); };
     const browser = await getBrowser();
+    report(15); // browser ready
     const files = ['summary.html', 'ownership.html', 'terms2.html'];
 
     // Render all three pages concurrently (one tab each). Promise.all preserves
     // input order, so the merge stays summary → ownership → terms. Wall-clock
     // drops from the sum of three renders to roughly the slowest single one.
+    // Report real progress (15% → 80%) as each page actually finishes.
+    let finished = 0;
     const pdfs = await Promise.all(
-        files.map((file) => renderTemplateToPdf(browser, file, reportData))
+        files.map((file) => renderTemplateToPdf(browser, file, reportData).then((buf) => {
+            finished += 1;
+            report(15 + Math.round((finished / files.length) * 65));
+            return buf;
+        }))
     );
 
+    report(85); // merging
     const mergedPdf = await PDFDocument.create();
     for (const pdfBytes of pdfs) {
         const doc = await PDFDocument.load(pdfBytes);
@@ -237,6 +246,7 @@ async function generatePDFFromTemplates(reportData) {
         copied.forEach((pg) => mergedPdf.addPage(pg));
     }
     const mergedPdfBytes = await mergedPdf.save();
+    report(97); // encoding + sending
     return Buffer.from(mergedPdfBytes).toString('base64');
 }
 
@@ -305,6 +315,34 @@ app.post('/generate-pdf', rateLimit({ windowMs: 60 * 1000, max: 10 }), async (re
     }
 
     console.log('Incoming Rows Count:', reportData.rows ? reportData.rows.length : 0, '| Round:', reportData.roundName);
+
+    // Opt-in streaming (?stream=1): emit newline-delimited JSON progress events
+    // — {"progress":N} as each render step completes — then a final
+    // {"success":true,"pdfBase64":...}. Without the flag the response is a single
+    // JSON object exactly as before, so older embeds keep working unchanged.
+    const wantsStream = req.query.stream === '1';
+
+    if (wantsStream) {
+        res.setHeader('Content-Type', 'application/x-ndjson');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('X-Accel-Buffering', 'no'); // discourage proxy buffering
+        if (res.flushHeaders) res.flushHeaders();
+        const send = (obj) => { try { res.write(JSON.stringify(obj) + '\n'); } catch (e) { /* client gone */ } };
+        try {
+            send({ progress: 5 });
+            const pdfBase64 = await generatePDFFromTemplates(reportData, (p) => send({ progress: p }));
+            console.log('PDF generation complete (Base64 length:', pdfBase64.length, ')');
+            send({ success: true, pdfBase64 });
+            res.end();
+        } catch (error) {
+            console.error('Error in /generate-pdf (stream) endpoint:', error);
+            send({ success: false, message: 'Failed to generate PDF' });
+            res.end();
+        } finally {
+            releaseSlot();
+        }
+        return;
+    }
 
     try {
         const pdfBase64 = await generatePDFFromTemplates(reportData);
