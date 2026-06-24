@@ -1677,30 +1677,49 @@ const BASE_URL = "https://safe-calculator-backend.onrender.com";
 // showEmailModal() falls back to the built-in modal.
 const WEBFLOW_FORM_SELECTOR = "#wf-form-Safe-calculator-page";
 
+// True for forms we must NEVER pick: our own built-in modal, or anything inside
+// the OLD duplicate calculator embed (#safe-calculator-root) still on the page.
+function _isExcludedLeadForm(f) {
+    return !f
+        || f.id === 'email-modal'
+        || !!f.closest('#email-modal')
+        || !!f.closest('#safe-calculator-root');
+}
+
+// Normalized field "names" of a form (lowercased, non-letters stripped).
+function _formFieldKeys(f) {
+    return Array.from(f.querySelectorAll('input,select,textarea'))
+        .map((i) => (i.getAttribute('name') || i.id || '').toLowerCase().replace(/[^a-z]/g, ''))
+        .filter(Boolean);
+}
+
 function findWebflowLeadForm() {
-    // 1. Try exact selector
+    const candidates = Array.from(document.querySelectorAll('form')).filter((f) => !_isExcludedLeadForm(f));
+
+    // 1. Prefer the user's lead form: the one with a single "Name" field (NOT
+    //    First-Name/Last-Name). This is the form they actually want used, even
+    //    if other forms exist on the page.
+    const nameForm = candidates.find((f) => {
+        const keys = _formFieldKeys(f);
+        return keys.includes('name') || keys.includes('fullname');
+    });
+    if (nameForm) return nameForm;
+
+    // 2. Try the exact Webflow selectors.
     let form = document.querySelector(WEBFLOW_FORM_SELECTOR);
-    if (form) return form;
+    if (!_isExcludedLeadForm(form)) return form;
 
-    // 2. Try exact Webflow data-name
     form = document.querySelector('form[data-name="Safe calculator page"]');
-    if (form) return form;
+    if (!_isExcludedLeadForm(form)) return form;
 
-    // 3. Try any form inside a Webflow form wrapper (.w-form)
-    const wForms = document.querySelectorAll('.w-form form');
-    for (const f of wForms) {
-        if (f.id !== 'email-modal' && !f.closest('#email-modal')) {
-            return f;
-        }
-    }
+    // 3. Any Webflow form wrapper (.w-form), preferring one with an email field.
+    const wForms = candidates.filter((f) => f.closest('.w-form'));
+    const withEmail = wForms.find((f) => _formFieldKeys(f).some((k) => k.includes('email')));
+    if (withEmail) return withEmail;
+    if (wForms.length) return wForms[0];
 
-    // 4. Try any form element on the page as fallback
-    const allForms = document.querySelectorAll('form');
-    for (const f of allForms) {
-        if (f.id !== 'email-modal' && !f.closest('#email-modal')) {
-            return f;
-        }
-    }
+    // 4. Any remaining form on the page.
+    if (candidates[0]) return candidates[0];
 
     return null;
 }
