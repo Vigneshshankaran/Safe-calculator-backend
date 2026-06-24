@@ -1941,8 +1941,8 @@ let _pdfEtaMs = null;         // estimated time remaining (ms), or null if unkno
 function ensurePdfLoaderStyles() {
     if (document.getElementById("sv-pdf-loader-style")) return;
     const css = `
-#sv-pdf-loader{position:fixed;inset:0;background:#ffffff;display:flex;align-items:center;justify-content:center;z-index:100000;font-family:'Inter',-apple-system,sans-serif;}
-#sv-pdf-loader .sv-pdf-card{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:24px;}
+#sv-pdf-loader{position:fixed;inset:0;background:rgba(13,10,64,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100000;font-family:'Inter',-apple-system,sans-serif;}
+#sv-pdf-loader .sv-pdf-card{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;background:#fff;border:1px solid #eae7ff;border-radius:16px;padding:40px 32px;max-width:380px;width:calc(100% - 32px);box-shadow:0 20px 48px rgba(13,10,64,0.16);}
 #sv-pdf-loader .sv-pdf-spinner{width:56px;height:56px;border:5px solid #eae7ff;border-top-color:#5f46ff;border-radius:50%;animation:sv-pdf-spin .8s linear infinite;}
 #sv-pdf-loader .sv-pdf-pct{font-size:34px;font-weight:700;color:#0d0a40;letter-spacing:-0.02em;line-height:1;}
 #sv-pdf-loader .sv-pdf-title{font-size:16px;font-weight:600;color:#0d0a40;}
