@@ -1895,18 +1895,13 @@ function openWebflowLeadPopup(onSuccess) {
                 const cb = _wfOnSuccess;
                 _wfOnSuccess = null;
                 if (typeof cb === "function") {
-                    // Temporarily replace content of doneEl with our beautiful spinner loader
+                    // Save the form's success markup so we can restore it on reopen.
                     if (!doneEl._originalContent) {
                         doneEl._originalContent = doneEl.innerHTML;
                     }
-                    doneEl.innerHTML = `
-                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px 0; text-align: center;">
-                            <div class="w-form-done-spinner"></div>
-                            <div style="font-weight: 500; font-size: 15px; color: #0d0a40;">Generating report...</div>
-                            <div style="font-size: 13px; color: #444266;">Please wait while we prepare your PDF.</div>
-                        </div>
-                    `;
-
+                    // Render the loader INSIDE this popup: the same popup now
+                    // shows the spinner + % + ETA (no separate full-screen overlay).
+                    _pdfLoaderTarget = doneEl;
                     try {
                         await cb();
                     } catch (err) {
@@ -1922,13 +1917,14 @@ function openWebflowLeadPopup(onSuccess) {
 }
 
 // ---------------------------------------------------------------------------
-// Full-screen white PDF loading overlay: the original spinner look + a live
-// percentage. The backend returns the PDF in one response (no streamed
-// progress), so the percentage is a continuously-advancing estimate — it never
-// stalls on a number (which feels broken), easing toward 99% while we wait and
-// snapping to 100% the instant the PDF is ready.
+// PDF loading UI: spinner + live percentage + estimated time remaining, driven
+// by the backend's real streamed progress events. It renders INSIDE the lead-
+// form popup when that flow is used (the same popup shows the progress), and
+// falls back to a standalone centered modal card for the built-in email modal.
 // ---------------------------------------------------------------------------
-let _pdfLoaderEl = null;
+let _pdfLoaderEl = null;       // the element currently holding the loader UI
+let _pdfLoaderOverlay = null;  // standalone backdrop+card (built-in modal flow)
+let _pdfLoaderTarget = null;   // when set, render the loader INSIDE this element
 let _pdfLoaderTimer = null;
 let _pdfDisplay = 0;          // currently-shown %
 let _pdfTarget = 0;           // % we're easing toward
@@ -1941,12 +1937,14 @@ let _pdfEtaMs = null;         // estimated time remaining (ms), or null if unkno
 function ensurePdfLoaderStyles() {
     if (document.getElementById("sv-pdf-loader-style")) return;
     const css = `
-#sv-pdf-loader{position:fixed;inset:0;background:rgba(13,10,64,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100000;font-family:'Inter',-apple-system,sans-serif;}
-#sv-pdf-loader .sv-pdf-card{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;background:#fff;border:1px solid #eae7ff;border-radius:16px;padding:40px 32px;max-width:380px;width:calc(100% - 32px);box-shadow:0 20px 48px rgba(13,10,64,0.16);}
-#sv-pdf-loader .sv-pdf-spinner{width:56px;height:56px;border:5px solid #eae7ff;border-top-color:#5f46ff;border-radius:50%;animation:sv-pdf-spin .8s linear infinite;}
-#sv-pdf-loader .sv-pdf-pct{font-size:34px;font-weight:700;color:#0d0a40;letter-spacing:-0.02em;line-height:1;}
-#sv-pdf-loader .sv-pdf-title{font-size:16px;font-weight:600;color:#0d0a40;}
-#sv-pdf-loader .sv-pdf-sub{font-size:13px;color:#6c6c8a;}
+#sv-pdf-loader{position:fixed;inset:0;background:rgba(13,10,64,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100000;}
+#sv-pdf-loader .sv-pdf-card{background:#fff;border:1px solid #eae7ff;border-radius:16px;padding:40px 32px;max-width:380px;width:calc(100% - 32px);box-shadow:0 20px 48px rgba(13,10,64,0.16);}
+.sv-pdf-card,.sv-pdf-inline{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;font-family:'Inter',-apple-system,sans-serif;}
+.sv-pdf-inline{padding:16px 4px 6px;}
+.sv-pdf-spinner{width:56px;height:56px;border:5px solid #eae7ff;border-top-color:#5f46ff;border-radius:50%;animation:sv-pdf-spin .8s linear infinite;}
+.sv-pdf-pct{font-size:34px;font-weight:700;color:#0d0a40;letter-spacing:-0.02em;line-height:1;}
+.sv-pdf-title{font-size:16px;font-weight:600;color:#0d0a40;}
+.sv-pdf-sub{font-size:13px;color:#6c6c8a;}
 @keyframes sv-pdf-spin{to{transform:rotate(360deg);}}`;
     const tag = document.createElement("style");
     tag.id = "sv-pdf-loader-style";
@@ -1963,19 +1961,28 @@ function setPdfLoaderPct(pct) {
 
 function showPdfLoader() {
     ensurePdfLoaderStyles();
-    if (!_pdfLoaderEl) {
-        _pdfLoaderEl = document.createElement("div");
-        _pdfLoaderEl.id = "sv-pdf-loader";
-        _pdfLoaderEl.innerHTML =
-            '<div class="sv-pdf-card">' +
-              '<div class="sv-pdf-spinner"></div>' +
-              '<div class="sv-pdf-pct">0%</div>' +
-              '<div class="sv-pdf-title">Generating your report</div>' +
-              '<div class="sv-pdf-sub">Please wait while we prepare your PDF…</div>' +
-            '</div>';
-        document.body.appendChild(_pdfLoaderEl);
+    const inner =
+        '<div class="sv-pdf-spinner"></div>' +
+        '<div class="sv-pdf-pct">0%</div>' +
+        '<div class="sv-pdf-title">Generating your report</div>' +
+        '<div class="sv-pdf-sub">Preparing your report…</div>';
+    if (_pdfLoaderTarget) {
+        // Render the loader INSIDE the popup container (no separate overlay).
+        _pdfLoaderTarget.innerHTML = '<div class="sv-pdf-inline">' + inner + '</div>';
+        _pdfLoaderEl = _pdfLoaderTarget.querySelector(".sv-pdf-inline");
+    } else {
+        // Standalone centered modal card over a dimmed backdrop.
+        if (!_pdfLoaderOverlay) {
+            _pdfLoaderOverlay = document.createElement("div");
+            _pdfLoaderOverlay.id = "sv-pdf-loader";
+            _pdfLoaderOverlay.innerHTML = '<div class="sv-pdf-card">' + inner + "</div>";
+            document.body.appendChild(_pdfLoaderOverlay);
+        } else {
+            _pdfLoaderOverlay.querySelector(".sv-pdf-card").innerHTML = inner;
+        }
+        _pdfLoaderOverlay.style.display = "flex";
+        _pdfLoaderEl = _pdfLoaderOverlay.querySelector(".sv-pdf-card");
     }
-    _pdfLoaderEl.style.display = "flex";
     _pdfDisplay = 0;
     _pdfTarget = 0;
     _pdfRealProgress = false;
@@ -2039,13 +2046,17 @@ function reportPdfProgress(p) {
 
 function hidePdfLoader(success) {
     clearInterval(_pdfLoaderTimer);
-    if (!_pdfLoaderEl) return;
-    if (success) {
-        setPdfLoaderPct(100);
-        setTimeout(() => { if (_pdfLoaderEl) _pdfLoaderEl.style.display = "none"; }, 550);
-    } else {
-        _pdfLoaderEl.style.display = "none";
+    if (success) setPdfLoaderPct(100);
+    // Only the standalone overlay needs hiding; the inline loader is cleared
+    // when the popup closes and restores its original success markup.
+    if (_pdfLoaderOverlay) {
+        if (success) {
+            setTimeout(() => { if (_pdfLoaderOverlay) _pdfLoaderOverlay.style.display = "none"; }, 550);
+        } else {
+            _pdfLoaderOverlay.style.display = "none";
+        }
     }
+    _pdfLoaderTarget = null;
 }
 
 // Generates the PDF from the current calculator state and downloads it.
