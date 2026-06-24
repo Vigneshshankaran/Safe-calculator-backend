@@ -1933,6 +1933,10 @@ let _pdfLoaderTimer = null;
 let _pdfDisplay = 0;          // currently-shown %
 let _pdfTarget = 0;           // % we're easing toward
 let _pdfRealProgress = false; // true once the server sends a real progress event
+let _pdfOpenTime = 0;         // when the loader opened (for cold-start messaging)
+let _pdfRealStartTime = 0;    // when the first real progress event arrived
+let _pdfRealStartPct = 0;
+let _pdfEtaMs = null;         // estimated time remaining (ms), or null if unknown
 
 function ensurePdfLoaderStyles() {
     if (document.getElementById("sv-pdf-loader-style")) return;
@@ -1975,8 +1979,14 @@ function showPdfLoader() {
     _pdfDisplay = 0;
     _pdfTarget = 0;
     _pdfRealProgress = false;
+    _pdfOpenTime = Date.now();
+    _pdfRealStartTime = 0;
+    _pdfRealStartPct = 0;
+    _pdfEtaMs = null;
     setPdfLoaderPct(0);
+    setPdfLoaderStatus("Preparing your report…");
     clearInterval(_pdfLoaderTimer);
+    const TICK = 120;
     _pdfLoaderTimer = setInterval(() => {
         // Before the server reports real progress (e.g. while waiting on a
         // cold-start wake-up), creep the target up to a small cap so the bar is
@@ -1986,15 +1996,45 @@ function showPdfLoader() {
         if (_pdfDisplay < _pdfTarget) _pdfDisplay += Math.max(0.3, (_pdfTarget - _pdfDisplay) * 0.18);
         if (_pdfDisplay > 99) _pdfDisplay = 99;
         setPdfLoaderPct(_pdfDisplay);
-    }, 120);
+
+        // Status / estimated-time line.
+        if (!_pdfRealProgress) {
+            // No real signal yet — likely a cold-start wake-up.
+            setPdfLoaderStatus(Date.now() - _pdfOpenTime > 2500
+                ? "Waking up the server…" : "Preparing your report…");
+        } else if (_pdfDisplay >= 96) {
+            setPdfLoaderStatus("Almost done…");
+        } else if (_pdfEtaMs != null) {
+            // Count the estimate down between events for a live feel.
+            _pdfEtaMs = Math.max(0, _pdfEtaMs - TICK);
+            const secs = Math.min(60, Math.max(1, Math.ceil(_pdfEtaMs / 1000)));
+            setPdfLoaderStatus("About " + secs + "s remaining");
+        }
+    }, TICK);
 }
 
-// Called with REAL progress (0-100) from the backend's streamed events. The
-// bar only ever moves forward and eases toward each new milestone.
+function setPdfLoaderStatus(text) {
+    if (!_pdfLoaderEl) return;
+    const sub = _pdfLoaderEl.querySelector(".sv-pdf-sub");
+    if (sub) sub.textContent = text;
+}
+
+// Called with REAL progress (0-100) from the backend's streamed events. The bar
+// only ever moves forward and eases toward each milestone, and we extrapolate a
+// real time-remaining estimate from the pace observed since the first event.
 function reportPdfProgress(p) {
     if (typeof p !== "number" || isNaN(p)) return;
     _pdfRealProgress = true;
+    const now = Date.now();
+    if (!_pdfRealStartTime) { _pdfRealStartTime = now; _pdfRealStartPct = p; }
     _pdfTarget = Math.max(_pdfTarget, Math.min(99, p));
+    const elapsed = now - _pdfRealStartTime;
+    const gained = p - _pdfRealStartPct;
+    if (gained > 0 && elapsed > 250) {
+        // remaining = remaining% ÷ observed rate, clamped, then smoothed.
+        const remainingMs = Math.min(120000, (100 - p) * elapsed / gained);
+        _pdfEtaMs = _pdfEtaMs == null ? remainingMs : (_pdfEtaMs * 0.4 + remainingMs * 0.6);
+    }
 }
 
 function hidePdfLoader(success) {
