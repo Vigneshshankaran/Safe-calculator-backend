@@ -1930,6 +1930,9 @@ function openWebflowLeadPopup(onSuccess) {
 // ---------------------------------------------------------------------------
 let _pdfLoaderEl = null;
 let _pdfLoaderTimer = null;
+let _pdfDisplay = 0;          // currently-shown %
+let _pdfTarget = 0;           // % we're easing toward
+let _pdfRealProgress = false; // true once the server sends a real progress event
 
 function ensurePdfLoaderStyles() {
     if (document.getElementById("sv-pdf-loader-style")) return;
@@ -1969,16 +1972,29 @@ function showPdfLoader() {
         document.body.appendChild(_pdfLoaderEl);
     }
     _pdfLoaderEl.style.display = "flex";
-    let pct = 0;
+    _pdfDisplay = 0;
+    _pdfTarget = 0;
+    _pdfRealProgress = false;
     setPdfLoaderPct(0);
     clearInterval(_pdfLoaderTimer);
     _pdfLoaderTimer = setInterval(() => {
-        // Always advance (min step) so it never looks frozen; ease toward 99%
-        // so there's headroom for the real 100% when the PDF arrives.
-        pct += Math.max(0.2, (99 - pct) * 0.03);
-        if (pct > 99) pct = 99;
-        setPdfLoaderPct(pct);
-    }, 150);
+        // Before the server reports real progress (e.g. while waiting on a
+        // cold-start wake-up), creep the target up to a small cap so the bar is
+        // alive but honest. Once real events arrive, reportPdfProgress drives it.
+        if (!_pdfRealProgress && _pdfTarget < 30) _pdfTarget += 0.5;
+        // Always nudge the displayed value toward the target so it never freezes.
+        if (_pdfDisplay < _pdfTarget) _pdfDisplay += Math.max(0.3, (_pdfTarget - _pdfDisplay) * 0.18);
+        if (_pdfDisplay > 99) _pdfDisplay = 99;
+        setPdfLoaderPct(_pdfDisplay);
+    }, 120);
+}
+
+// Called with REAL progress (0-100) from the backend's streamed events. The
+// bar only ever moves forward and eases toward each new milestone.
+function reportPdfProgress(p) {
+    if (typeof p !== "number" || isNaN(p)) return;
+    _pdfRealProgress = true;
+    _pdfTarget = Math.max(_pdfTarget, Math.min(99, p));
 }
 
 function hidePdfLoader(success) {
@@ -1997,14 +2013,46 @@ async function downloadReportPdf(company) {
     showPdfLoader();
     try {
         const reportData = prepareReportData(company || "");
-        const response = await fetch(`${BASE_URL}/generate-pdf`, {
+        // Ask for streamed progress (?stream=1): the server sends newline-
+        // delimited JSON — {"progress":N} events then {"success":true,...}.
+        const response = await fetch(`${BASE_URL}/generate-pdf?stream=1`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ reportData }),
         });
         if (!response.ok) throw new Error("Failed to generate PDF");
-        const result = await response.json();
-        if (!result.success) throw new Error(result.message || "Failed to generate PDF");
+
+        let result = null;
+        if (response.body && response.body.getReader) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buf = "";
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, { stream: true });
+                let nl;
+                while ((nl = buf.indexOf("\n")) >= 0) {
+                    const line = buf.slice(0, nl).trim();
+                    buf = buf.slice(nl + 1);
+                    if (!line) continue;
+                    let msg;
+                    try { msg = JSON.parse(line); } catch (e) { continue; }
+                    if (typeof msg.progress === "number") reportPdfProgress(msg.progress);
+                    if (msg.success === false) throw new Error(msg.message || "Failed to generate PDF");
+                    if (msg.success === true) result = msg;
+                }
+            }
+            const tail = buf.trim();
+            if (!result && tail) { try { const m = JSON.parse(tail); if (m.success) result = m; } catch (e) {} }
+        } else {
+            // No streaming support in this browser — parse as one JSON response.
+            result = await response.json();
+        }
+
+        if (!result || !result.success || !result.pdfBase64) {
+            throw new Error((result && result.message) || "Failed to generate PDF");
+        }
         const bytes = Uint8Array.from(atob(result.pdfBase64), (c) => c.charCodeAt(0));
         const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
         const a = document.createElement("a");
