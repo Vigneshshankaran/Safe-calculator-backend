@@ -165,8 +165,8 @@ async function getBrowser() {
 async function renderTemplateToPdf(browser, file, reportData) {
     const page = await browser.newPage();
     page.on('pageerror', (err) => console.error(`PAGE ERROR (${file}):`, err.message));
-    // Reuse cached static assets (Google Fonts CSS/woff, chart.js, tailwind.js)
-    // across renders instead of re-fetching/re-parsing them every time.
+    // Reuse cached static assets (Google Fonts CSS/woff, chart.js, the prebuilt
+    // *.tw.css) across renders instead of re-fetching/re-parsing them every time.
     await page.setCacheEnabled(true);
     // Bound every page operation so a misbehaving render can't hold a slot
     // forever — but generously, because a COLD start (container waking +
