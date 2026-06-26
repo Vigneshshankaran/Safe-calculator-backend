@@ -202,9 +202,12 @@ function syncReport() {
 
 function renderCharts() {
     console.log("renderCharts called...");
-    // Pages without charts (ownership, terms) have no canvases — skip entirely
-    // so they don't need chart.js loaded at all (saves parsing 204KB per render).
+    // Pages without charts (ownership, terms) have no canvases — skip the chart
+    // code (they don't even load chart.js), but STILL signal render-complete,
+    // otherwise the server waits the full timeout for __renderDone on these
+    // pages (which dominated total render time).
     if (!document.getElementById('pieChartCanvas') && !document.getElementById('barChartCanvas')) {
+        if (typeof window !== "undefined") window.__renderDone = true;
         return;
     }
     if (typeof Chart === 'undefined') {
