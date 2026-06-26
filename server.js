@@ -168,9 +168,12 @@ async function renderTemplateToPdf(browser, file, reportData) {
     // Reuse cached static assets (Google Fonts CSS/woff, chart.js, tailwind.js)
     // across renders instead of re-fetching/re-parsing them every time.
     await page.setCacheEnabled(true);
-    // Bound every page operation so a misbehaving render can't hold a slot forever.
-    page.setDefaultNavigationTimeout(20000);
-    page.setDefaultTimeout(20000);
+    // Bound every page operation so a misbehaving render can't hold a slot
+    // forever — but generously, because a COLD start (container waking +
+    // Chromium launching on a throttled CPU) makes the first render much slower.
+    // Too-tight a limit here is exactly what made the first PDF fail.
+    page.setDefaultNavigationTimeout(60000);
+    page.setDefaultTimeout(60000);
 
     try {
         const absPath = path.resolve(__dirname, 'public', 'js', file);
@@ -195,7 +198,9 @@ async function renderTemplateToPdf(browser, file, reportData) {
         }, reportData);
 
         // Wait for an explicit render-complete signal instead of a fixed sleep.
-        await page.waitForFunction('window.__renderDone === true', { timeout: 5000 }).catch(() => {
+        // Allow plenty of time so a slow cold render still produces a COMPLETE
+        // page rather than proceeding early and capturing a half-rendered one.
+        await page.waitForFunction('window.__renderDone === true', { timeout: 30000 }).catch(() => {
             console.warn(`Render signal not received for ${file}; proceeding.`);
         });
         // Ensure web fonts are ready, then a short settle for canvas paint.
@@ -258,7 +263,9 @@ async function generatePDFFromTemplates(reportData, onProgress) {
 // keep this at 2. Tune with MAX_CONCURRENT_PDFS.
 // ---------------------------------------------------------------------------
 const MAX_CONCURRENT = Math.max(1, parseInt(process.env.MAX_CONCURRENT_PDFS || '2', 10));
-const QUEUE_WAIT_MS = 20000; // max time a request waits for a free slot
+const QUEUE_WAIT_MS = 60000; // max time a request waits for a free slot (a cold
+                             // render can hold a slot ~25-40s, so wait longer
+                             // before rejecting queued requests as "busy")
 let activeJobs = 0;
 const queue = [];
 
