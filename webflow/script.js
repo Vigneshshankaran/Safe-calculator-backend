@@ -1729,10 +1729,21 @@ function getWebflowWrap() {
     return form ? (form.closest(".w-form") || form) : null;
 }
 
+// Move the Webflow form wrapper off-screen rather than display:none. Cloudflare
+// Turnstile (and similar challenge widgets) refuse to render/validate inside a
+// display:none container, which left the widget's token missing/stale by the
+// time the popup opened later and caused Webflow to reject the submission
+// ("Oops! Something went wrong while submitting the form"). Off-screen keeps
+// it laid out (non-zero size) and rendered, just invisible/non-interactive.
+function hideWfWrapOffscreen(wrap) {
+    wrap.style.cssText =
+        "display:block;position:fixed;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;";
+}
+
 // Keep the Webflow form out of the page flow until the popup opens.
 function initWebflowLeadPopup() {
     const wrap = getWebflowWrap();
-    if (wrap) wrap.style.display = "none";
+    if (wrap) hideWfWrapOffscreen(wrap);
 }
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initWebflowLeadPopup);
@@ -1745,7 +1756,7 @@ let _wfOnSuccess = null;
 
 window.closeWebflowLeadPopup = function () {
     const wrap = getWebflowWrap();
-    if (wrap) wrap.style.display = "none";
+    if (wrap) hideWfWrapOffscreen(wrap);
     if (_wfBackdrop) _wfBackdrop.style.display = "none";
 };
 
@@ -1885,6 +1896,14 @@ function openWebflowLeadPopup(onSuccess) {
         "max-width:480px;width:calc(100% - 32px);max-height:90vh;overflow:auto;" +
         "box-shadow:0 20px 48px rgba(13,10,64,0.16);font-family:'Inter',sans-serif;";
 
+    // The widget may have rendered (or expired) while off-screen/hidden — force
+    // a fresh token now that it's actually visible, so submission doesn't fail
+    // with a stale/missing Turnstile response.
+    const turnstileEl = form.querySelector(".cf-turnstile, [data-sitekey]");
+    if (turnstileEl && window.turnstile && typeof window.turnstile.reset === "function") {
+        try { window.turnstile.reset(turnstileEl); } catch (e) { /* widget not ready yet */ }
+    }
+
     // Intercept submit on the Webflow form to show a loading state
     if (!form._wfSubmitObserved) {
         form._wfSubmitObserved = true;
@@ -1931,6 +1950,29 @@ function openWebflowLeadPopup(onSuccess) {
             }
         });
         obs.observe(doneEl, { attributes: true, attributeFilter: ["style"] });
+    }
+
+    // When Webflow shows its fail state, re-enable the button so the user can
+    // retry — previously nothing reset it, so a failed submit left it stuck on
+    // "Generating..." forever.
+    if (failEl && !failEl._svObserved) {
+        failEl._svObserved = true;
+        const failObs = new MutationObserver(() => {
+            if (getComputedStyle(failEl).display !== "none") {
+                const btn = form.querySelector('input[type="submit"]') || form.querySelector('button[type="submit"]') || form.querySelector('.w-button');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = "";
+                    btn.style.pointerEvents = "";
+                    if (btn.tagName === "INPUT") {
+                        btn.value = btn._originalValue || "Download the report";
+                    } else {
+                        btn.textContent = btn._originalText || "Download the report";
+                    }
+                }
+            }
+        });
+        failObs.observe(failEl, { attributes: true, attributeFilter: ["style"] });
     }
     return true;
 }
